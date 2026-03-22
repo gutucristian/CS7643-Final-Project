@@ -30,6 +30,10 @@ def download_etf_data(ticker: str, start: str, end: str, interval: str = "1d", o
     # Keep only OHLCV columns
     df = df[["Open", "High", "Low", "Close", "Volume"]].copy()
 
+    # Flatten columns if they came back as MultiIndex
+    if hasattr(df.columns, "nlevels") and df.columns.nlevels > 1:
+        df.columns = df.columns.get_level_values(0)
+    
     # Reset index so Date becomes a normal column
     df.reset_index(inplace=True)
 
