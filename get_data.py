@@ -46,7 +46,7 @@ def download_etf_data(ticker: str, start: str, end: str, interval: str = "1d", o
 
 if __name__ == "__main__":
     ticker = "SPY"
-    start_date = "2024-01-01"
+    start_date = "2005-01-01"
     end_date = "2025-01-01"
 
     etf_data = download_etf_data(
