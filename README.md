@@ -5,7 +5,6 @@
 ```
 CS7643-Final-Project/
 │
-├── main.py                              # entry point (builds indicator CSV)
 ├── requirements.txt
 ├── README.md
 │
@@ -14,6 +13,9 @@ CS7643-Final-Project/
 │
 ├── data/                                # data pipeline
 │   ├── __init__.py
+│   ├── build_indicators.py              # entry point — builds indicator CSV
+│   ├── data_utils.py                    # indicator computation, CSV loading
+│   ├── get_data.py                      # yfinance data fetching
 │   ├── dataset.py                       # SPYDataset — sliding window (PyTorch)
 │   └── labeling.py                      # triple_barrier_labels()
 │
@@ -38,14 +40,10 @@ CS7643-Final-Project/
 │   ├── __init__.py
 │   └── simulator.py                     # Backtester — run / metrics
 │
-├── experiments/                         # per-model training scripts
-│   ├── train_mlp.py
-│   ├── train_lstm.py
-│   └── train_cnn.py
-│
-└── utils/                               # data helpers
-    ├── data_utils.py                    # indicator computation, CSV loading
-    └── get_data.py                      # yfinance data fetching
+└── experiments/                         # per-model training scripts
+    ├── train_mlp.py
+    ├── train_lstm.py
+    └── train_cnn.py
 ```
 
 # Conda Set Up Instructions
