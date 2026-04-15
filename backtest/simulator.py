@@ -63,7 +63,7 @@ class Backtester:
             if sig == 1 and shares == 0:        # Long signal, currently flat → buy
                 shares = cash / price_today
                 cash = 0.0
-            elif sig == 2 and shares > 0:       # Short signal, currently long → liquidate
+            elif sig == -1 and shares > 0:      # Short signal, currently long → liquidate
                 cash = shares * price_today
                 shares = 0.0
             # Hold → do nothing
@@ -90,7 +90,7 @@ class Backtester:
                     shares = cash / price_today
                     cash = 0.0
                     in_market = True
-                elif sig == 2:
+                elif sig == -1:
                     short_shares = cash / price_today
                     cash += short_shares * price_today  # lock in proceeds
                     in_market = True
@@ -100,7 +100,7 @@ class Backtester:
                     short_shares = 0.0
                     shares = cash / price_today
                     cash = 0.0
-                elif sig == 2 and shares > 0:       # liquidate long, go short
+                elif sig == -1 and shares > 0:      # liquidate long, go short
                     cash = shares * price_today
                     shares = 0.0
                     short_shares = cash / price_today
@@ -121,7 +121,8 @@ class Backtester:
 
         Returns:
             Dict with keys: 'total_return', 'sharpe_ratio', 'max_drawdown',
-            'win_rate', 'profit_factor', 'benchmark_return'.
+            'benchmark_max_drawdown', 'win_rate', 'profit_factor',
+            'benchmark_return'.
         """
         values = np.asarray(portfolio_values, dtype=float)
 
@@ -137,6 +138,11 @@ class Backtester:
         drawdowns = (values - peak) / peak
         max_drawdown = drawdowns.min()
 
+        # benchmark (buy-and-hold) max drawdown
+        bh_values = self.initial_capital * (self.prices[1:] / self.prices[0])
+        bh_peak = np.maximum.accumulate(bh_values)
+        benchmark_max_drawdown = ((bh_values - bh_peak) / bh_peak).min()
+
         winning_days = daily_returns[daily_returns > 0]
         losing_days = daily_returns[daily_returns < 0]
         win_rate = len(winning_days) / len(daily_returns) if len(daily_returns) > 0 else 0.0
@@ -151,6 +157,7 @@ class Backtester:
             "total_return": total_return,
             "sharpe_ratio": sharpe_ratio,
             "max_drawdown": max_drawdown,
+            "benchmark_max_drawdown": benchmark_max_drawdown,
             "win_rate": win_rate,
             "profit_factor": profit_factor,
             "benchmark_return": benchmark_return,
