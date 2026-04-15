@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import numpy as np
 import pandas as pd
 import yaml
+from sklearn.metrics import classification_report, confusion_matrix
 
 from backtest.simulator import Backtester
 from data.data_utils import load_ohlcv_csv
@@ -66,15 +67,24 @@ def main():
     signal_map = {0: 0, 1: 1, 2: -1}
     signals = np.array([signal_map[p] for p in raw_preds])
 
-    # --------------------------------------------------------- label summary
+    # --------------------------------------------------------- classification metrics
     label_names = {0: "Hold", 1: "Long", 2: "Short"}
+    target_names = [label_names[i] for i in sorted(label_names)]
+
     print("\nPrediction distribution:")
     unique, counts = np.unique(raw_preds, return_counts=True)
     for cls, cnt in zip(unique, counts):
         print(f"  {label_names.get(cls, cls)}: {cnt} ({cnt/len(raw_preds)*100:.1f}%)")
 
-    correct = (raw_preds == true_labels).sum()
-    print(f"\nTest accuracy: {correct}/{len(true_labels)} ({correct/len(true_labels)*100:.2f}%)")
+    print()
+    print(classification_report(true_labels, raw_preds, target_names=target_names, digits=3))
+
+    print("Confusion matrix (rows=true, cols=pred):")
+    cm = confusion_matrix(true_labels, raw_preds, labels=[0, 1, 2])
+    header = f"{'':>8}" + "".join(f"{n:>8}" for n in target_names)
+    print(header)
+    for i, row in enumerate(cm):
+        print(f"{target_names[i]:>8}" + "".join(f"{v:>8}" for v in row))
 
     # --------------------------------------------------------- backtest
     print()
@@ -83,12 +93,13 @@ def main():
         result = bt.run(signals)
         m = bt.metrics(result["portfolio_values"])
         print(f"--- Backtest: {mode} ---")
-        print(f"  Total return:     {m['total_return']*100:+.2f}%")
-        print(f"  Benchmark return: {m['benchmark_return']*100:+.2f}%")
-        print(f"  Sharpe ratio:     {m['sharpe_ratio']:.3f}")
-        print(f"  Max drawdown:     {m['max_drawdown']*100:.2f}%")
-        print(f"  Win rate:         {m['win_rate']*100:.1f}%")
-        print(f"  Profit factor:    {m['profit_factor']:.3f}")
+        print(f"  Total return:          {m['total_return']*100:+.2f}%")
+        print(f"  Benchmark return:      {m['benchmark_return']*100:+.2f}%")
+        print(f"  Sharpe ratio:          {m['sharpe_ratio']:.3f}")
+        print(f"  Max drawdown:          {m['max_drawdown']*100:.2f}%")
+        print(f"  Benchmark max drawdown:{m['benchmark_max_drawdown']*100:.2f}%")
+        print(f"  Win rate:              {m['win_rate']*100:.1f}%")
+        print(f"  Profit factor:         {m['profit_factor']:.3f}")
         print()
 
 
