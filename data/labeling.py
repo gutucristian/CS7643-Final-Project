@@ -1,33 +1,41 @@
 """
-Triple Barrier Method labeling for Buy / Sell / Hold signals.
+Direction-change labeling for Buy / Sell / Hold signals.
 """
 
+import numpy as np
 import pandas as pd
 
 
-def triple_barrier_labels(
+def direction_change_labels(
     df: pd.DataFrame,
-    upper_barrier: float = 0.02,
-    lower_barrier: float = -0.02,
-    max_holding_period: int = 20,
     price_col: str = "Close",
 ) -> pd.Series:
     """
-    Generate Buy / Sell / Hold labels using the Triple Barrier Method.
+    Generate Hold / Long / Short labels based on direction changes.
 
-    For each timestep, look forward up to `max_holding_period` days:
-      - Label = 1 (Buy)  if the upper barrier is hit first
-      - Label = -1 (Sell) if the lower barrier is hit first
-      - Label = 0 (Hold) if the time barrier is reached without hitting either
+    Label encoding (cross-entropy compatible):
+      0 = Hold  (default)
+      1 = Long  if next-day direction is up AND prior direction was flat/down
+      2 = Short if next-day direction is down AND prior direction was flat/up
 
     Args:
         df: DataFrame with at least a price column indexed by Date.
-        upper_barrier: fractional profit-taking threshold (e.g. 0.02 = +2%).
-        lower_barrier: fractional stop-loss threshold (e.g. -0.02 = -2%).
-        max_holding_period: maximum look-forward window in trading days.
         price_col: column name to use as price series.
 
     Returns:
-        pd.Series of integer labels {-1, 0, 1} aligned with df.index.
+        pd.Series of integer labels {0, 1, 2} aligned with a cleaned index
+        (first and last rows are dropped due to shift boundary conditions).
     """
-    raise NotImplementedError("triple_barrier_labels is not yet implemented.")
+    close = df[price_col]
+
+    fwd_dir = np.sign(close.shift(-1) - close)   # direction T -> T+1
+    prev_dir = np.sign(close - close.shift(1))    # direction T-1 -> T
+
+    labels = pd.Series(0, index=close.index, dtype=int)
+    labels[(fwd_dir > 0) & (prev_dir <= 0)] = 1   # Long
+    labels[(fwd_dir < 0) & (prev_dir >= 0)] = 2   # Short
+
+    # drop first row (no prev_dir) and last row (no fwd_dir)
+    labels = labels.iloc[1:-1]
+
+    return labels

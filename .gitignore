@@ -37,5 +37,6 @@ Thumbs.db
 .claude/
 
 # Environment variables
-.env
+.venv
 note.md
+bash.exe.stackdump

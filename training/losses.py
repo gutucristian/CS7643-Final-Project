@@ -1,41 +1,51 @@
 """
 Loss functions for training.
 
-Approach 1 — cross_entropy_loss: standard categorical cross-entropy
-    optimises for label accuracy (Triple Barrier labels as targets).
+Both losses share a unified forward signature:
+    loss = criterion(logits, labels, fwd_returns)
 
-Approach 2 — sharpe_loss: differentiable negative Sharpe ratio
-    maps model output probabilities to continuous position sizes and
-    optimises directly for risk-adjusted returns (no labels needed).
+This keeps the Trainer loss-agnostic — switching between cross-entropy and
+Sharpe is a one-line change in the training script.
+
+Approach 1 — cross_entropy_loss: standard categorical cross-entropy.
+Approach 2 — sharpe_loss: differentiable negative Sharpe ratio that maps
+    model output probabilities to a continuous position in [-1, 1] and
+    optimises directly for risk-adjusted returns (ignores labels).
 """
 
 import torch
 import torch.nn as nn
 
 
+class _CrossEntropyLoss(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self._ce = nn.CrossEntropyLoss()
+
+    def forward(self, logits: torch.Tensor, labels: torch.Tensor, fwd_returns: torch.Tensor) -> torch.Tensor:
+        return self._ce(logits, labels)
+
+
+class _SharpeLoss(nn.Module):
+    def __init__(self, eps: float = 1e-8):
+        super().__init__()
+        self.eps = eps
+
+    def forward(self, logits: torch.Tensor, labels: torch.Tensor, fwd_returns: torch.Tensor) -> torch.Tensor:
+        probs = torch.softmax(logits, dim=-1)  # (B, 3): [Hold, Long, Short]
+        # position: long → +1, short → -1, hold → 0
+        position = probs[:, 1] - probs[:, 2]   # in (-1, 1)
+        strategy_returns = position * fwd_returns
+        mean = strategy_returns.mean()
+        std = strategy_returns.std() + self.eps
+        return -mean / std  # minimise negative Sharpe
+
+
 def cross_entropy_loss() -> nn.Module:
-    """
-    Return a standard CrossEntropyLoss instance.
-
-    Usage:
-        criterion = cross_entropy_loss()
-        loss = criterion(logits, labels)   # labels in {0, 1, 2}
-    """
-    raise NotImplementedError("cross_entropy_loss is not yet implemented.")
+    """Return a CrossEntropyLoss with the unified (logits, labels, returns) signature."""
+    return _CrossEntropyLoss()
 
 
-def sharpe_loss(logits: torch.Tensor, returns: torch.Tensor) -> torch.Tensor:
-    """
-    Differentiable negative Sharpe ratio loss.
-
-    Maps softmax probabilities to a scalar position in [-1, 1], computes
-    per-step strategy returns, then returns the negative Sharpe ratio.
-
-    Args:
-        logits: (batch, 3) raw model outputs [Hold, Buy, Sell].
-        returns: (batch,) actual 1-day forward returns for each timestep.
-
-    Returns:
-        Scalar tensor — negative Sharpe ratio (minimise this).
-    """
-    raise NotImplementedError("sharpe_loss is not yet implemented.")
+def sharpe_loss() -> nn.Module:
+    """Return a Sharpe-ratio loss with the unified (logits, labels, returns) signature."""
+    return _SharpeLoss()

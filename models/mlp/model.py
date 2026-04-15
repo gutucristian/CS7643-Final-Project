@@ -1,14 +1,20 @@
 """
-Multi-Layer Perceptron (MLP) for Buy/Sell/Hold classification.
+Multi-Layer Perceptron (MLP) for Hold / Long / Short classification.
 """
 
+import torch
 import torch.nn as nn
 
 
 class MLP(nn.Module):
     """
-    Fully-connected MLP that takes a flattened feature window as input
-    and outputs logits over 3 classes (Hold, Buy, Sell).
+    Fully-connected MLP with BatchNorm and Dropout after each hidden layer.
+
+    Architecture (default hidden_sizes=[256, 128, 64]):
+        Linear(input -> 256) -> BN -> ReLU -> Dropout
+        Linear(256 -> 128)   -> BN -> ReLU -> Dropout
+        Linear(128 -> 64)    -> BN -> ReLU -> Dropout
+        Linear(64 -> num_classes)
 
     Args:
         input_size: total number of input features (window_size * num_features).
@@ -25,7 +31,23 @@ class MLP(nn.Module):
         dropout: float = 0.3,
     ):
         super().__init__()
-        raise NotImplementedError("MLP.__init__ is not yet implemented.")
 
-    def forward(self, x):
-        raise NotImplementedError("MLP.forward is not yet implemented.")
+        layers = []
+        in_dim = input_size
+        for h in hidden_sizes:
+            layers += [
+                nn.Linear(in_dim, h),
+                nn.BatchNorm1d(h),
+                nn.ReLU(),
+                nn.Dropout(dropout),
+            ]
+            in_dim = h
+        layers.append(nn.Linear(in_dim, num_classes))
+
+        self.net = nn.Sequential(*layers)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # flatten any input with more than 2 dims: (B, W, F) -> (B, W*F)
+        if x.dim() > 2:
+            x = x.flatten(start_dim=1)
+        return self.net(x)
