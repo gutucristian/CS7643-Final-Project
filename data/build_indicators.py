@@ -1,4 +1,4 @@
-from utils.data_utils import save_indicators_to_csv
+from data.data_utils import save_indicators_to_csv
 
 def main():
     input_csv = "SPY_ohlcv.csv"
