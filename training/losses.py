@@ -18,9 +18,9 @@ import torch.nn as nn
 
 
 class _CrossEntropyLoss(nn.Module):
-    def __init__(self):
+    def __init__(self, weight: torch.Tensor = None):
         super().__init__()
-        self._ce = nn.CrossEntropyLoss()
+        self._ce = nn.CrossEntropyLoss(weight=weight)
 
     def forward(self, logits: torch.Tensor, labels: torch.Tensor, fwd_returns: torch.Tensor) -> torch.Tensor:
         return self._ce(logits, labels)
@@ -41,9 +41,20 @@ class _SharpeLoss(nn.Module):
         return -mean / std  # minimise negative Sharpe
 
 
-def cross_entropy_loss() -> nn.Module:
-    """Return a CrossEntropyLoss with the unified (logits, labels, returns) signature."""
-    return _CrossEntropyLoss()
+def cross_entropy_loss(class_counts: list = None, num_classes: int = 3) -> nn.Module:
+    """Return a CrossEntropyLoss with the unified (logits, labels, returns) signature.
+
+    Args:
+        class_counts: list of per-class sample counts. If provided, weights are
+                      set to 1/count (normalized), so rare classes get higher weight.
+        num_classes: total number of classes (used only when class_counts is None).
+    """
+    weight = None
+    if class_counts is not None:
+        counts = torch.tensor(class_counts, dtype=torch.float)
+        weight = 1.0 / counts
+        weight = weight / weight.sum() * num_classes   # normalize so avg weight == 1
+    return _CrossEntropyLoss(weight=weight)
 
 
 def sharpe_loss() -> nn.Module:

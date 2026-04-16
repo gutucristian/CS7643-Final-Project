@@ -30,17 +30,20 @@ def load_config(path: str) -> dict:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="configs/mlp.yaml")
-    parser.add_argument(
-        "--predictions",
-        default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "mlp", "test_predictions.csv"),
-    )
     args = parser.parse_args()
+
+    run_tag = os.path.splitext(os.path.basename(args.config))[0]
+    default_predictions = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "mlp", f"{run_tag}_test_predictions.csv"
+    )
 
     cfg = load_config(args.config)
     dc = cfg["data"]
     bc = cfg["backtest"]
 
     # --------------------------------------------------------- load predictions
+    args.predictions = default_predictions
+
     if not os.path.exists(args.predictions):
         print(f"Predictions file not found: {args.predictions}")
         print("Run train_mlp.py first to generate predictions.")

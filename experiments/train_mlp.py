@@ -62,6 +62,9 @@ def main():
     parser.add_argument("--config", default="configs/mlp.yaml")
     args = parser.parse_args()
 
+    # derive run tag from config filename, e.g. configs/mlp_lr001.yaml → mlp_lr001
+    run_tag = os.path.splitext(os.path.basename(args.config))[0]
+
     cfg = load_config(args.config)
     dc = cfg["data"]
     mc = cfg["model"]
@@ -88,14 +91,35 @@ def main():
 
     print(f"Data split — train: {len(df_train)}, val: {len(df_val)}, test: {len(df_test)}")
 
-    # normalise using train statistics only
+    # convert OHLC to log-returns and volume to log-diff so features are stationary
     feature_cols = dc["feature_cols"]
+    price_cols  = [c for c in feature_cols if c != "Volume"]
+    has_volume  = "Volume" in feature_cols
+
+    def make_stationary(df_in: pd.DataFrame) -> pd.DataFrame:
+        df_out = df_in.copy()
+        for col in price_cols:
+            df_out[col] = np.log(df_in[col] / df_in[col].shift(1))
+        if has_volume:
+            df_out["Volume"] = np.log(df_in["Volume"] / df_in["Volume"].shift(1))
+        return df_out.iloc[1:]   # drop first row (NaN from shift)
+
+    df_train = make_stationary(df_train)
+    df_val   = make_stationary(df_val)
+    df_test  = make_stationary(df_test)
+
+    # re-align labels after dropping first row of each split
+    lbl_train = lbl_train.loc[lbl_train.index.intersection(df_train.index)]
+    lbl_val   = lbl_val.loc[lbl_val.index.intersection(df_val.index)]
+    lbl_test  = lbl_test.loc[lbl_test.index.intersection(df_test.index)]
+
+    # z-score normalise using train statistics only
     means = df_train[feature_cols].mean()
     stds  = df_train[feature_cols].std().replace(0, 1)
 
-    df_train = df_train.copy(); df_train[feature_cols] = (df_train[feature_cols] - means) / stds
-    df_val   = df_val.copy();   df_val[feature_cols]   = (df_val[feature_cols]   - means) / stds
-    df_test  = df_test.copy();  df_test[feature_cols]  = (df_test[feature_cols]  - means) / stds
+    df_train[feature_cols] = (df_train[feature_cols] - means) / stds
+    df_val[feature_cols]   = (df_val[feature_cols]   - means) / stds
+    df_test[feature_cols]  = (df_test[feature_cols]  - means) / stds
 
     window_size = dc["window_size"]
     train_ds = SPYDataset(df_train, lbl_train, window_size, feature_cols, dc["price_col"])
@@ -123,16 +147,18 @@ def main():
     if tc["loss"] == "sharpe":
         criterion = sharpe_loss()
     else:
-        criterion = cross_entropy_loss()
+        class_counts = [int((lbl_train == c).sum()) for c in range(mc["num_classes"])]
+        print(f"Train label counts — Hold: {class_counts[0]}, Long: {class_counts[1]}, Short: {class_counts[2]}")
+        criterion = cross_entropy_loss(class_counts=class_counts, num_classes=mc["num_classes"])
     print(f"Loss: {tc['loss']}  |  Device: {device}")
 
     trainer = Trainer(model, optimizer, criterion, device)
 
     # --------------------------------------------------------------- training
     os.makedirs(cc["dir"], exist_ok=True)
-    checkpoint_path = os.path.join(cc["dir"], cc["filename"])
+    checkpoint_path = os.path.join(cc["dir"], f"{run_tag}_best.pt")
 
-    best_val_acc = -1.0
+    best_val_loss = float("inf")
     print()
     for epoch in range(1, tc["epochs"] + 1):
         # single-epoch train
@@ -150,11 +176,12 @@ def main():
             f"val_acc={val_acc:.4f}"
         )
 
-        if val_acc > best_val_acc:
-            best_val_acc = val_acc
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
             torch.save(
                 {
                     "epoch": epoch,
+                    "val_loss": val_loss,
                     "val_acc": val_acc,
                     "model_state_dict": model.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),
@@ -163,7 +190,7 @@ def main():
                 checkpoint_path,
             )
 
-    print(f"\nBest val acc: {best_val_acc:.4f}  |  checkpoint: {checkpoint_path}")
+    print(f"\nBest val loss: {best_val_loss:.4f}  |  checkpoint: {checkpoint_path}")
 
     # --------------------------------------------------- reload best & test
     ckpt = torch.load(checkpoint_path, map_location=device)
@@ -193,11 +220,11 @@ def main():
         {"true_label": true_labels, "pred_label": raw_preds},
         index=pred_index,
     )
-    results_path = os.path.join(out_dir, "test_predictions.csv")
+    results_path = os.path.join(out_dir, f"{run_tag}_test_predictions.csv")
     results_df.to_csv(results_path)
     print(f"\nSaved test labels + predictions → {results_path}")
 
-    print("\nRun experiments/backtest_mlp.py to evaluate backtest performance.")
+    print(f"\nRun experiments/backtest_mlp.py --config {args.config} to evaluate backtest performance.")
 
 
 if __name__ == "__main__":
