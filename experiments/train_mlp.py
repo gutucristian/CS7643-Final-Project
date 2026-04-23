@@ -23,19 +23,12 @@ from data.dataset import SPYDataset
 from data.labeling import direction_change_labels
 from models.mlp.model import MLP
 from training.losses import cross_entropy_loss, sharpe_loss
-from training.trainer import Trainer
+from training.trainer import Trainer, resolve_device
 
 
 def load_config(path: str) -> dict:
     with open(path) as f:
         return yaml.safe_load(f)
-
-
-def resolve_device(device_str: str) -> str:
-    if device_str == "auto":
-        return "cuda" if torch.cuda.is_available() else "cpu"
-    return device_str
-
 
 def chronological_split(n: int, train_frac: float, val_frac: float):
     train_end = int(n * train_frac)

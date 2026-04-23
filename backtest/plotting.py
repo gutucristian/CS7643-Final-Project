@@ -1,0 +1,116 @@
+"""
+Helper functions for saving backtest curves and comparison plots.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+
+def _load_matplotlib():
+    try:
+        import matplotlib
+
+        matplotlib.use("Agg")
+
+        import matplotlib.dates as mdates
+        import matplotlib.pyplot as plt
+        from matplotlib.ticker import FuncFormatter
+    except ImportError as exc:
+        raise ImportError(
+            "matplotlib is required for backtest plots"
+        ) from exc
+
+    return plt, mdates, FuncFormatter
+
+
+def save_equity_curve_csv(
+    path: str | Path,
+    dates,
+    strategy_values,
+    benchmark_values,
+) -> Path:
+    curve_df = pd.DataFrame(
+        {
+            "strategy_value": strategy_values,
+            "benchmark_value": benchmark_values,
+        },
+        index=pd.to_datetime(dates),
+    )
+    curve_df.index.name = "Date"
+
+    path = Path(path)
+    curve_df.to_csv(path)
+    return path
+
+
+def plot_equity_curves(
+    path: str | Path,
+    dates,
+    strategy_values,
+    benchmark_values,
+    *,
+    title: str,
+    strategy_label: str = "Model Strategy",
+    benchmark_label: str = "Buy & Hold SPY",
+    initial_capital: float | None = None,
+) -> Path:
+    dates = pd.to_datetime(dates)
+    strategy_values = np.asarray(strategy_values, dtype=float)
+    benchmark_values = np.asarray(benchmark_values, dtype=float)
+
+    if not (len(dates) == len(strategy_values) == len(benchmark_values)):
+        raise ValueError("dates, strategy_values, and benchmark_values must have the same length.")
+
+    path = Path(path)
+    plt, mdates, FuncFormatter = _load_matplotlib()
+
+    fig, ax = plt.subplots(figsize=(11, 6))
+
+    ax.plot(dates, strategy_values, label=strategy_label, color="#0b6e4f", linewidth=2.4)
+    ax.plot(dates, benchmark_values, label=benchmark_label, color="#1f77b4", linewidth=2.2)
+
+    if initial_capital is not None:
+        ax.axhline(
+            initial_capital,
+            color="#6b7280",
+            linestyle="--",
+            linewidth=1.2,
+            alpha=0.8,
+            label="Initial Capital",
+        )
+
+    strategy_final = strategy_values[-1]
+    benchmark_final = benchmark_values[-1]
+    summary = (
+        f"{strategy_label}: ${strategy_final:,.0f}\n"
+        f"{benchmark_label}: ${benchmark_final:,.0f}"
+    )
+    ax.text(
+        0.02,
+        0.98,
+        summary,
+        transform=ax.transAxes,
+        va="top",
+        ha="left",
+        fontsize=10,
+        bbox={"boxstyle": "round,pad=0.4", "facecolor": "white", "alpha": 0.9, "edgecolor": "#d1d5db"},
+    )
+
+    ax.set_title(title, fontsize=14, pad=12)
+    ax.set_xlabel("Date")
+    ax.set_ylabel("Portfolio Value ($)")
+    ax.yaxis.set_major_formatter(FuncFormatter(lambda x, _: f"${x:,.0f}"))
+    ax.xaxis.set_major_locator(mdates.AutoDateLocator())
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
+    ax.grid(True, linestyle="--", linewidth=0.6, alpha=0.35)
+    ax.legend(frameon=False)
+
+    fig.autofmt_xdate()
+    fig.tight_layout()
+    fig.savefig(path, dpi=180, bbox_inches="tight")
+    plt.close(fig)
+    return path

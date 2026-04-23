@@ -40,15 +40,20 @@ class Backtester:
         signals = np.asarray(signals, dtype=int)
         prices = self.prices
         n = min(len(signals), len(prices) - 1)
+        prices = prices[: n + 1]
 
         if self.mode == "long_only":
-            portfolio_values = self._run_long_only(signals[:n], prices[:n + 1])
+            portfolio_values = self._run_long_only(signals[:n], prices)
         else:
-            portfolio_values = self._run_long_short(signals[:n], prices[:n + 1])
+            portfolio_values = self._run_long_short(signals[:n], prices)
+
+        benchmark_values = self.benchmark_values(prices)
 
         return {
             "portfolio_values": portfolio_values,
             "final_value": portfolio_values[-1],
+            "benchmark_values": benchmark_values,
+            "benchmark_final_value": benchmark_values[-1],
         }
 
     def _run_long_only(self, signals, prices):
@@ -74,55 +79,45 @@ class Backtester:
         return values
 
     def _run_long_short(self, signals, prices):
-        cash = self.initial_capital
-        shares = 0.0          # positive = long shares
-        short_shares = 0.0    # positive = shorted shares
-        in_market = False
+        equity = self.initial_capital
+        position = 0  # -1 = short, 0 = flat, +1 = long
         values = []
 
         for i, sig in enumerate(signals):
             price_today = prices[i]
             price_next = prices[i + 1]
 
-            if not in_market:
-                # establish first position
-                if sig == 1:
-                    shares = cash / price_today
-                    cash = 0.0
-                    in_market = True
-                elif sig == -1:
-                    short_shares = cash / price_today
-                    cash += short_shares * price_today  # lock in proceeds
-                    in_market = True
-            else:
-                if sig == 1 and short_shares > 0:   # cover short, go long
-                    cash -= short_shares * price_today  # pay to cover
-                    short_shares = 0.0
-                    shares = cash / price_today
-                    cash = 0.0
-                elif sig == -1 and shares > 0:      # liquidate long, go short
-                    cash = shares * price_today
-                    shares = 0.0
-                    short_shares = cash / price_today
-                    cash += short_shares * price_today
-                # Hold → maintain position
+            if sig == 1:
+                position = 1
+            elif sig == -1:
+                position = -1
 
-            # mark-to-market
-            long_value = shares * price_next
-            short_pnl = short_shares * (price_today - price_next)  # profit if price falls
-            portfolio_value = cash + long_value + short_pnl
-            values.append(portfolio_value)
+            asset_return = (price_next / price_today) - 1.0
+            equity *= 1.0 + position * asset_return
+            values.append(equity)
 
         return values
 
-    def metrics(self, portfolio_values) -> dict:
+    def benchmark_values(self, prices=None):
+        """
+        Compute the buy-and-hold curve for the specified price window.
+        """
+        if prices is None:
+            prices = self.prices
+
+        prices = np.asarray(prices, dtype=float)
+        if len(prices) < 2:
+            return np.asarray([self.initial_capital], dtype=float)
+        return self.initial_capital * (prices[1:] / prices[0])
+
+    def metrics(self, portfolio_values, benchmark_values=None) -> dict:
         """
         Compute financial performance metrics.
 
         Returns:
             Dict with keys: 'total_return', 'sharpe_ratio', 'max_drawdown',
             'benchmark_max_drawdown', 'win_rate', 'profit_factor',
-            'benchmark_return'.
+            'benchmark_return', 'benchmark_final_value'.
         """
         values = np.asarray(portfolio_values, dtype=float)
 
@@ -138,8 +133,9 @@ class Backtester:
         drawdowns = (values - peak) / peak
         max_drawdown = drawdowns.min()
 
-        # benchmark (buy-and-hold) max drawdown
-        bh_values = self.initial_capital * (self.prices[1:] / self.prices[0])
+        if benchmark_values is None:
+            benchmark_values = self.benchmark_values()
+        bh_values = np.asarray(benchmark_values, dtype=float)
         bh_peak = np.maximum.accumulate(bh_values)
         benchmark_max_drawdown = ((bh_values - bh_peak) / bh_peak).min()
 
@@ -151,7 +147,7 @@ class Backtester:
             if losing_days.sum() != 0 else float("inf")
         )
 
-        benchmark_return = (self.prices[-1] - self.prices[0]) / self.prices[0]
+        benchmark_return = (bh_values[-1] - self.initial_capital) / self.initial_capital
 
         return {
             "total_return": total_return,
@@ -161,4 +157,5 @@ class Backtester:
             "win_rate": win_rate,
             "profit_factor": profit_factor,
             "benchmark_return": benchmark_return,
+            "benchmark_final_value": bh_values[-1],
         }

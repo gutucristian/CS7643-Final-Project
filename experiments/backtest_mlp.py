@@ -18,6 +18,7 @@ import pandas as pd
 import yaml
 from sklearn.metrics import classification_report, confusion_matrix
 
+from backtest.plotting import plot_equity_curves, save_equity_curve_csv
 from backtest.simulator import Backtester
 from data.data_utils import load_ohlcv_csv
 
@@ -94,8 +95,39 @@ def main():
     for mode in bc["modes"]:
         bt = Backtester(backtest_prices, initial_capital=bc["initial_capital"], mode=mode)
         result = bt.run(signals)
-        m = bt.metrics(result["portfolio_values"])
+        m = bt.metrics(result["portfolio_values"], benchmark_values=result["benchmark_values"])
+
+        out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mlp")
+        os.makedirs(out_dir, exist_ok=True)
+        curve_dates = pred_dates
+        curve_path = os.path.join(out_dir, f"{run_tag}_{mode}_backtest_curve.csv")
+        save_equity_curve_csv(
+            curve_path,
+            curve_dates,
+            result["portfolio_values"],
+            result["benchmark_values"],
+        )
+        plot_path = os.path.join(out_dir, f"{run_tag}_{mode}_backtest_plot.png")
+        plot_saved = False
+        try:
+            plot_equity_curves(
+                plot_path,
+                curve_dates,
+                result["portfolio_values"],
+                result["benchmark_values"],
+                title=f"MLP Backtest vs Buy-and-Hold ({mode})",
+                strategy_label="MLP Strategy",
+                benchmark_label="Buy & Hold SPY",
+                initial_capital=bc["initial_capital"],
+            )
+            plot_saved = True
+        except ImportError as exc:
+            print(f"  Plot skipped:           {exc}")
+
         print(f"--- Backtest: {mode} ---")
+        print(f"  Initial capital:       ${bc['initial_capital']:,.2f}")
+        print(f"  Strategy final value:  ${result['final_value']:,.2f}")
+        print(f"  Benchmark final value: ${result['benchmark_final_value']:,.2f}")
         print(f"  Total return:          {m['total_return']*100:+.2f}%")
         print(f"  Benchmark return:      {m['benchmark_return']*100:+.2f}%")
         print(f"  Sharpe ratio:          {m['sharpe_ratio']:.3f}")
@@ -103,6 +135,9 @@ def main():
         print(f"  Benchmark max drawdown:{m['benchmark_max_drawdown']*100:.2f}%")
         print(f"  Win rate:              {m['win_rate']*100:.1f}%")
         print(f"  Profit factor:         {m['profit_factor']:.3f}")
+        print(f"  Saved equity curve to: {curve_path}")
+        if plot_saved:
+            print(f"  Saved plot to:         {plot_path}")
         print()
 
 

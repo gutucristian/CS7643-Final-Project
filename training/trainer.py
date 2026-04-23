@@ -7,6 +7,20 @@ import torch
 from torch.utils.data import DataLoader
 
 
+def resolve_device(device_str: str = "auto") -> str:
+    if device_str != "auto":
+        return device_str
+
+    if torch.cuda.is_available():
+        return "cuda"
+
+    mps_backend = getattr(torch.backends, "mps", None)
+    if mps_backend is not None and mps_backend.is_available():
+        return "mps"
+
+    return "cpu"
+
+
 class Trainer:
     """
     Manages training and evaluation for a PyTorch model.
@@ -15,14 +29,14 @@ class Trainer:
         model: nn.Module to train.
         optimizer: torch Optimizer instance.
         criterion: loss module with signature forward(logits, labels, fwd_returns).
-        device: torch device string, e.g. 'cpu' or 'cuda'.
+        device: torch device string, e.g. 'cpu', 'cuda', 'mps', or 'auto'.
     """
 
     def __init__(self, model, optimizer, criterion, device: str = "cpu"):
-        self.device = torch.device(device)
+        self.device = torch.device(resolve_device(device))
         self.model = model.to(self.device)
         self.optimizer = optimizer
-        self.criterion = criterion
+        self.criterion = criterion.to(self.device) if hasattr(criterion, "to") else criterion
 
     def train(self, dataloader: DataLoader, epochs: int = 10, val_dataloader: DataLoader = None) -> dict:
         """
