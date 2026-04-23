@@ -1,5 +1,5 @@
-Run: mlp_all
-Predictions: C:\Users\b0220\Documents\CS7643-Final-Project\results\mlp_all_test_predictions.csv
+Run: mlp_all_cn
+Predictions: C:\Users\b0220\Documents\CS7643-Final-Project\results\mlp_all_cn_test_predictions.csv
 Samples: 729
 
 Prediction distribution:

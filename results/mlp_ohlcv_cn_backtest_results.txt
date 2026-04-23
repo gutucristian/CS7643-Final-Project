@@ -1,5 +1,5 @@
-Run: mlp_ohlcv
-Predictions: C:\Users\b0220\Documents\CS7643-Final-Project\results\mlp_ohlcv_test_predictions.csv
+Run: mlp_ohlcv_cn
+Predictions: C:\Users\b0220\Documents\CS7643-Final-Project\results\mlp_ohlcv_cn_test_predictions.csv
 Samples: 736
 
 Prediction distribution:
