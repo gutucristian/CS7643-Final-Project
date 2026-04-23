@@ -46,6 +46,11 @@ CS7643-Final-Project/
 ├── checkpoints/                         # saved model weights
 │   └── mlp_best.pt
 │
+├── results/                             # outputs from training + backtest runs
+│   ├── {run_tag}_test_predictions.csv
+│   ├── {run_tag}_backtest_results.txt
+│   └── {run_tag}_backtest_plot.png
+│
 └── experiments/                         # per-model training scripts
     ├── mlp/
     │   └── test_predictions.csv         # saved after training (true + pred labels)
@@ -53,6 +58,7 @@ CS7643-Final-Project/
     ├── backtest_lstm.py                 # placeholder
     ├── backtest_mlp.py                  # run backtest from saved predictions
     ├── count_labels.py                  # inspect label distribution
+    ├── plot.py                          # plot portfolio curves from results
     ├── train_cnn.py
     ├── train_lstm.py
     └── train_mlp.py                     # train MLP, save checkpoint + predictions
