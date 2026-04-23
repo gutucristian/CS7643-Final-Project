@@ -108,9 +108,9 @@ class Backtester:
                 # Hold → maintain position
 
             # mark-to-market
+            # cash already includes short sale proceeds; subtract current buyback cost
             long_value = shares * price_next
-            short_pnl = short_shares * (price_today - price_next)  # profit if price falls
-            portfolio_value = cash + long_value + short_pnl
+            portfolio_value = cash + long_value - short_shares * price_next
             values.append(portfolio_value)
 
         return values

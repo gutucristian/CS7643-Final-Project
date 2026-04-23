@@ -1,0 +1,42 @@
+Run: mlp_all_sr
+Predictions: C:\Users\b0220\Documents\CS7643-Final-Project\results\mlp_all_sr_test_predictions.csv
+Samples: 729
+
+Prediction distribution:
+  Hold: 77 (10.6%)
+  Long: 650 (89.2%)
+  Short: 2 (0.3%)
+
+              precision    recall  f1-score   support
+
+        Hold      0.519     0.107     0.177       375
+        Long      0.238     0.876     0.375       177
+       Short      0.000     0.000     0.000       177
+
+    accuracy                          0.267       729
+   macro avg      0.253     0.327     0.184       729
+weighted avg      0.325     0.267     0.182       729
+
+Confusion matrix (rows=true, cols=pred):
+            Hold    Long   Short
+    Hold      40     334       1
+    Long      21     155       1
+   Short      16     161       0
+
+--- Backtest: long_only ---
+  Total return:          +26.99%
+  Benchmark return:      +30.62%
+  Sharpe ratio:          0.568
+  Max drawdown:          -23.31%
+  Benchmark max drawdown:-22.75%
+  Win rate:              52.7%
+  Profit factor:         1.102
+
+--- Backtest: long_short ---
+  Total return:          +23.41%
+  Benchmark return:      +30.62%
+  Sharpe ratio:          0.510
+  Max drawdown:          -24.54%
+  Benchmark max drawdown:-22.75%
+  Win rate:              52.7%
+  Profit factor:         1.091

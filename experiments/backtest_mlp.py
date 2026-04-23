@@ -20,6 +20,8 @@ from sklearn.metrics import classification_report, confusion_matrix
 
 from backtest.simulator import Backtester
 from data.data_utils import load_ohlcv_csv
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from plot import plot_backtest
 
 
 def load_config(path: str) -> dict:
@@ -34,7 +36,7 @@ def main():
 
     run_tag = os.path.splitext(os.path.basename(args.config))[0]
     default_predictions = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "mlp", f"{run_tag}_test_predictions.csv"
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "results", f"{run_tag}_test_predictions.csv"
     )
 
     cfg = load_config(args.config)
@@ -74,36 +76,66 @@ def main():
     label_names = {0: "Hold", 1: "Long", 2: "Short"}
     target_names = [label_names[i] for i in sorted(label_names)]
 
-    print("\nPrediction distribution:")
+    lines = []
+
+    lines.append(f"Run: {run_tag}")
+    lines.append(f"Predictions: {args.predictions}")
+    lines.append(f"Samples: {len(preds_df)}")
+    lines.append("")
+
+    lines.append("Prediction distribution:")
     unique, counts = np.unique(raw_preds, return_counts=True)
     for cls, cnt in zip(unique, counts):
-        print(f"  {label_names.get(cls, cls)}: {cnt} ({cnt/len(raw_preds)*100:.1f}%)")
+        lines.append(f"  {label_names.get(cls, cls)}: {cnt} ({cnt/len(raw_preds)*100:.1f}%)")
+    lines.append("")
 
-    print()
-    print(classification_report(true_labels, raw_preds, target_names=target_names, digits=3))
+    lines.append(classification_report(true_labels, raw_preds, target_names=target_names, digits=3))
 
-    print("Confusion matrix (rows=true, cols=pred):")
+    lines.append("Confusion matrix (rows=true, cols=pred):")
     cm = confusion_matrix(true_labels, raw_preds, labels=[0, 1, 2])
     header = f"{'':>8}" + "".join(f"{n:>8}" for n in target_names)
-    print(header)
+    lines.append(header)
     for i, row in enumerate(cm):
-        print(f"{target_names[i]:>8}" + "".join(f"{v:>8}" for v in row))
+        lines.append(f"{target_names[i]:>8}" + "".join(f"{v:>8}" for v in row))
+    lines.append("")
 
     # --------------------------------------------------------- backtest
-    print()
+    results_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "results")
+    os.makedirs(results_dir, exist_ok=True)
+
     for mode in bc["modes"]:
         bt = Backtester(backtest_prices, initial_capital=bc["initial_capital"], mode=mode)
         result = bt.run(signals)
         m = bt.metrics(result["portfolio_values"])
-        print(f"--- Backtest: {mode} ---")
-        print(f"  Total return:          {m['total_return']*100:+.2f}%")
-        print(f"  Benchmark return:      {m['benchmark_return']*100:+.2f}%")
-        print(f"  Sharpe ratio:          {m['sharpe_ratio']:.3f}")
-        print(f"  Max drawdown:          {m['max_drawdown']*100:.2f}%")
-        print(f"  Benchmark max drawdown:{m['benchmark_max_drawdown']*100:.2f}%")
-        print(f"  Win rate:              {m['win_rate']*100:.1f}%")
-        print(f"  Profit factor:         {m['profit_factor']:.3f}")
-        print()
+        lines.append(f"--- Backtest: {mode} ---")
+        lines.append(f"  Total return:          {m['total_return']*100:+.2f}%")
+        lines.append(f"  Benchmark return:      {m['benchmark_return']*100:+.2f}%")
+        lines.append(f"  Sharpe ratio:          {m['sharpe_ratio']:.3f}")
+        lines.append(f"  Max drawdown:          {m['max_drawdown']*100:.2f}%")
+        lines.append(f"  Benchmark max drawdown:{m['benchmark_max_drawdown']*100:.2f}%")
+        lines.append(f"  Win rate:              {m['win_rate']*100:.1f}%")
+        lines.append(f"  Profit factor:         {m['profit_factor']:.3f}")
+        lines.append("")
+
+        plot_path = os.path.join(results_dir, f"{run_tag}_{mode}_plot.png")
+        plot_backtest(
+            dates=pred_dates,
+            prices=backtest_prices,
+            signals=signals,
+            portfolio_values=result["portfolio_values"],
+            initial_capital=bc["initial_capital"],
+            mode=mode,
+            run_tag=run_tag,
+            save_path=plot_path,
+        )
+
+    output = "\n".join(lines)
+    print(output)
+
+    results_path = os.path.join(results_dir, f"{run_tag}_backtest_results.txt")
+    with open(results_path, "w") as f:
+        f.write(output)
+    print(f"Saved results → {results_path}")
 
 
 if __name__ == "__main__":
