@@ -20,6 +20,8 @@ from sklearn.metrics import classification_report, confusion_matrix
 
 from backtest.simulator import Backtester
 from data.data_utils import load_ohlcv_csv
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from plot import plot_backtest
 
 
 def load_config(path: str) -> dict:
@@ -114,6 +116,18 @@ def main():
         lines.append(f"  Win rate:              {m['win_rate']*100:.1f}%")
         lines.append(f"  Profit factor:         {m['profit_factor']:.3f}")
         lines.append("")
+
+        plot_path = os.path.join(results_dir, f"{run_tag}_{mode}_plot.png")
+        plot_backtest(
+            dates=pred_dates,
+            prices=backtest_prices,
+            signals=signals,
+            portfolio_values=result["portfolio_values"],
+            initial_capital=bc["initial_capital"],
+            mode=mode,
+            run_tag=run_tag,
+            save_path=plot_path,
+        )
 
     output = "\n".join(lines)
     print(output)

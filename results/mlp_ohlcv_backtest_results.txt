@@ -33,10 +33,10 @@ Confusion matrix (rows=true, cols=pred):
   Profit factor:         1.011
 
 --- Backtest: long_short ---
-  Total return:          +37.64%
+  Total return:          -31.06%
   Benchmark return:      +35.23%
-  Sharpe ratio:          3.694
-  Max drawdown:          -71.61%
+  Sharpe ratio:          -0.625
+  Max drawdown:          -43.44%
   Benchmark max drawdown:-22.75%
-  Win rate:              52.5%
-  Profit factor:         1.996
+  Win rate:              47.1%
+  Profit factor:         0.899
