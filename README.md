@@ -149,10 +149,14 @@ Loads saved predictions and runs the portfolio simulator in both `long_only` and
 python experiments/backtest_mlp.py --config configs/mlp.yaml
 ```
 
-### 4. Inspect labels (optional)
-```bash
-python experiments/count_labels.py SPY_ohlcv_labels_mlp.csv
-```
+### 4. Results
+All outputs are saved to the `results/` directory:
+
+| File | Description |
+|---|---|
+| `{run_tag}_test_predictions.csv` | Per-day true labels and model predictions over the test split |
+| `{run_tag}_backtest_results.txt` | Full metrics report: prediction distribution, classification report, confusion matrix, and financial backtest metrics for each mode |
+| `{run_tag}_backtest_plot.png` | Portfolio value curve vs buy-and-hold benchmark over the test period |
 
 ### Configuration
 All hyperparameters live in `configs/mlp.yaml`:

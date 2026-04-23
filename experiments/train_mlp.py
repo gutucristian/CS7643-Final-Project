@@ -224,7 +224,7 @@ def main():
         print(f"  {label_names.get(cls, cls)}: {cnt} ({cnt/len(raw_preds)*100:.1f}%)")
 
     # ------------------------------------------------- save predictions
-    out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mlp")
+    out_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "results")
     os.makedirs(out_dir, exist_ok=True)
 
     # true labels aligned with predictions: last label of each window
