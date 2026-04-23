@@ -6,19 +6,6 @@ import torch.nn as nn
 
 
 class LSTMModel(nn.Module):
-    """
-    Stacked LSTM followed by a linear classification head.
-
-    Input shape: (batch, seq_len, num_features)
-    Output shape: (batch, num_classes)
-
-    Args:
-        input_size: number of features per timestep.
-        hidden_size: LSTM hidden state dimension.
-        num_layers: number of stacked LSTM layers.
-        num_classes: number of output classes (default 3).
-        dropout: dropout between LSTM layers (only applied when num_layers > 1).
-    """
 
     def __init__(
         self,
@@ -29,7 +16,34 @@ class LSTMModel(nn.Module):
         dropout: float = 0.3,
     ):
         super().__init__()
-        raise NotImplementedError("LSTMModel.__init__ is not yet implemented.")
+
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+
+        if num_layers > 1:
+            dropout_val = dropout
+        else:
+            dropout_val = 0.0
+
+
+        self.lstm = nn.LSTM(
+            input_size = input_size, hidden_size=hidden_size,
+            num_layers = num_layers, batch_first = True,
+            dropout = dropout_val
+        )
+
+        self.dropout = nn.Dropout(dropout)
+        self.classifier = nn.Linear(hidden_size, num_classes)
 
     def forward(self, x):
-        raise NotImplementedError("LSTMModel.forward is not yet implemented.")
+        lstm_out, (h_n, c_n) = self.lstm(x)
+
+        # take the final hidden state from the top LSTM layer
+        # shape: (batch, hidden_size)
+        final_hidden = h_n[-1]
+
+        final_hidden = self.dropout(final_hidden)
+        logits = self.classifier(final_hidden)
+
+        return logits
+

@@ -12,17 +12,17 @@ The following inputs define the labeling:
 - **time limit** - max holding period (number of days to look ahead)
 
 We then check each future day in order until a barrier is hit or the time limit is reached.
-- if price hits the upper barrier first → label = 1
-- if price hits the lower barrier first → label = -1
-- if neither is hit within the time window → label = 0
+- if price hits the upper barrier first -> label = 1
+- if price hits the lower barrier first -> label = -1
+- if neither is hit within the time window -> label = 0
 
 High prices are used to check the upper barrier, and low prices are used for the lower barrier (i.e., whether the price ever crossed the threshold during the day).
 
 ## Label Meaning
 
-- **1 (Buy)** → price moved up enough to hit the profit target  
-- **-1 (Sell)** → price dropped enough to hit the stop loss  
-- **0 (Hold)** → no strong movement within the time window  
+- **0 (Hold)** -> no strong movement within the time window 
+- **1 (Buy)** -> price moved up enough to hit the profit target  
+- **2 (Sell)** -> price dropped enough to hit the stop loss   
 
 ## Current Labeling Hyperparameters
 
