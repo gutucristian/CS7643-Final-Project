@@ -71,6 +71,12 @@ def triple_barrier_labels(
         labels.iloc[i] = label
 
     labels.index = data.index
+
+    # remap labels for CrossEntropyLoss:
+    # Hold = 0, Buy = 1, Sell = 2
+    label_map = {-1: 2, 0: 0, 1: 1}
+    labels = labels.map(label_map).astype("int8")
+    
     return labels
 
 
