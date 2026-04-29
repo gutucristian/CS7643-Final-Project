@@ -5,6 +5,28 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+from utils.triple_barrier import encode_triple_barrier_labels, triple_barrier_labels
+
+
+CNN_FEATURE_COLUMNS = [
+    "log_return_1d",
+    "close_sma_ratio_5",
+    "close_sma_ratio_10",
+    "close_sma_ratio_20",
+    "close_sma_ratio_50",
+    "rsi_14",
+    "macd_hist_norm",
+    "bbp_20",
+    "momentum_5",
+    "momentum_10",
+    "momentum_20",
+    "volatility_5",
+    "volatility_10",
+    "volatility_20",
+    "volume_ratio_5",
+    "volume_ratio_20",
+]
+
 
 def load_ohlcv_csv(csv_path: str) -> pd.DataFrame:
     """
@@ -140,6 +162,22 @@ def compute_all_indicators(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def compute_cnn_features(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+    out = add_returns(out)
+    out = add_sma(out)
+    out = add_rsi(out)
+    out = add_macd(out)
+    out = add_bollinger_bands(out)
+    out = add_momentum(out)
+    out = add_volatility(out)
+    out = add_volume_features(out)
+
+    out["macd_hist_norm"] = out["macd_hist"] / out["Close"]
+
+    return out[CNN_FEATURE_COLUMNS].copy()
+
+
 def save_indicators_to_csv(input_csv_path: str, output_csv_path: str, dropna: bool = False) -> pd.DataFrame:
     """
     Load OHLCV data, compute indicators, and save to a new CSV.
@@ -160,3 +198,90 @@ def save_indicators_to_csv(input_csv_path: str, output_csv_path: str, dropna: bo
 
     df.to_csv(output_csv_path, index=True)
     return df
+
+
+def save_cnn_features_to_csv(input_csv_path: str, output_csv_path: str, dropna: bool = True) -> pd.DataFrame:
+    """
+    Load OHLCV data, compute the recommended CNN feature set, and save it.
+
+    Args:
+        input_csv_path: path to raw OHLCV CSV
+        output_csv_path: path to save CNN feature CSV
+        dropna: whether to drop warm-up rows caused by rolling indicators
+
+    Returns:
+        DataFrame containing the CNN feature columns
+    """
+    df = load_ohlcv_csv(input_csv_path)
+    df = compute_cnn_features(df)
+
+    if dropna:
+        df = df.dropna()
+
+    df.to_csv(output_csv_path, index=True)
+    return df
+
+
+def compute_cnn_training_data(
+    df: pd.DataFrame,
+    upper_barrier: float = 0.03,
+    lower_barrier: float = -0.03,
+    max_holding_period: int = 10,
+    price_col: str = "Close",
+    drop_feature_na: bool = True,
+    drop_last_incomplete_labels: bool = True,
+) -> pd.DataFrame:
+    """
+    Build the aligned CNN feature matrix and triple-barrier labels.
+
+    Returns a DataFrame indexed by Date with the feature columns
+    plus the label:
+      0 = Hold
+      1 = Buy
+      2 = Sell
+    """
+    features = compute_cnn_features(df)
+    if drop_feature_na:
+        features = features.dropna()
+
+    raw_labels = triple_barrier_labels(
+        df,
+        upper_barrier=upper_barrier,
+        lower_barrier=lower_barrier,
+        max_holding_period=max_holding_period,
+        price_col=price_col,
+        drop_last_incomplete=drop_last_incomplete_labels,
+    )
+    labels = encode_triple_barrier_labels(raw_labels).rename("label")
+
+    dataset = features.join(labels, how="inner")
+    dataset = dataset.dropna(subset=["label"])
+    dataset["label"] = dataset["label"].astype(np.int64)
+    return dataset
+
+
+def save_cnn_training_data_to_csv(
+    input_csv_path: str,
+    output_csv_path: str,
+    upper_barrier: float = 0.03,
+    lower_barrier: float = -0.03,
+    max_holding_period: int = 10,
+    price_col: str = "Close",
+    drop_feature_na: bool = True,
+    drop_last_incomplete_labels: bool = True,
+) -> pd.DataFrame:
+    """
+    Load OHLCV data, compute CNN features, align triple-barrier labels, and save.
+    """
+    df = load_ohlcv_csv(input_csv_path)
+    dataset = compute_cnn_training_data(
+        df,
+        upper_barrier=upper_barrier,
+        lower_barrier=lower_barrier,
+        max_holding_period=max_holding_period,
+        price_col=price_col,
+        drop_feature_na=drop_feature_na,
+        drop_last_incomplete_labels=drop_last_incomplete_labels,
+    )
+    dataset.to_csv(output_csv_path, index=True)
+    return dataset

@@ -89,26 +89,7 @@ Sample 2:  [day2,  day3,  ..., day21]  → predict label for day21
 
 ## Labeling Strategy
 
-Labels are generated from **close-to-close direction changes**, producing three classes: `Long (1)`, `Short (-1)`, and `Hold (0)`.
-
-**Logic:**
-
-Given a price series, compute the daily direction:
-```
-Price:      1    3    4    7    5    4
-Direction:  —    up   up   up   dn   dn
-Label:      L    H    H    S    H    (NaN at end)
-```
-
-- Direction **changes to up** → `Long` — enter or switch to long position
-- Direction **stays up** → `Hold` — maintain current position
-- Direction **changes to down** → `Short` — enter or switch to short position
-- Direction **stays down** → `Hold` — maintain current position
-- Last row → `NaN` (no future price available)
-
-**Execution:** Labels are generated from `sign(Close_t - Close_{t-1})`. The predicted action on day T is executed at **day T+1 open price**, reflecting a realistic signal-after-close, execute-next-open workflow.
-
-This labeling encodes the theoretically optimal strategy — capturing every directional move — and the model is trained to predict these direction changes from technical indicators observed at day T's close.
+Labels are generated via the triple barrier method. 
 
 ## MLP Training Adjustments
 

@@ -18,10 +18,9 @@ import pandas as pd
 import yaml
 from sklearn.metrics import classification_report, confusion_matrix
 
+from backtest.plotting import plot_equity_curves, save_equity_curve_csv
 from backtest.simulator import Backtester
 from data.data_utils import load_ohlcv_csv
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from plot import plot_backtest
 
 
 def load_config(path: str) -> dict:
@@ -106,8 +105,36 @@ def main():
     for mode in bc["modes"]:
         bt = Backtester(backtest_prices, initial_capital=bc["initial_capital"], mode=mode)
         result = bt.run(signals)
-        m = bt.metrics(result["portfolio_values"])
+        m = bt.metrics(result["portfolio_values"], benchmark_values=result["benchmark_values"])
+        curve_dates = pred_dates
+        curve_path = os.path.join(results_dir, f"{run_tag}_{mode}_backtest_curve.csv")
+        save_equity_curve_csv(
+            curve_path,
+            curve_dates,
+            result["portfolio_values"],
+            result["benchmark_values"],
+        )
+        plot_path = os.path.join(results_dir, f"{run_tag}_{mode}_backtest_plot.png")
+        plot_saved = False
+        try:
+            plot_equity_curves(
+                plot_path,
+                curve_dates,
+                result["portfolio_values"],
+                result["benchmark_values"],
+                title=f"MLP Backtest vs Buy-and-Hold ({mode})",
+                strategy_label="MLP Strategy",
+                benchmark_label="Buy & Hold SPY",
+                initial_capital=bc["initial_capital"],
+            )
+            plot_saved = True
+        except ImportError as exc:
+            lines.append(f"  Plot skipped:           {exc}")
+
         lines.append(f"--- Backtest: {mode} ---")
+        lines.append(f"  Initial capital:       ${bc['initial_capital']:,.2f}")
+        lines.append(f"  Strategy final value:  ${result['final_value']:,.2f}")
+        lines.append(f"  Benchmark final value: ${result['benchmark_final_value']:,.2f}")
         lines.append(f"  Total return:          {m['total_return']*100:+.2f}%")
         lines.append(f"  Benchmark return:      {m['benchmark_return']*100:+.2f}%")
         lines.append(f"  Sharpe ratio:          {m['sharpe_ratio']:.3f}")
@@ -115,19 +142,10 @@ def main():
         lines.append(f"  Benchmark max drawdown:{m['benchmark_max_drawdown']*100:.2f}%")
         lines.append(f"  Win rate:              {m['win_rate']*100:.1f}%")
         lines.append(f"  Profit factor:         {m['profit_factor']:.3f}")
+        lines.append(f"  Saved equity curve to: {curve_path}")
+        if plot_saved:
+            lines.append(f"  Saved plot to:         {plot_path}")
         lines.append("")
-
-        plot_path = os.path.join(results_dir, f"{run_tag}_{mode}_plot.png")
-        plot_backtest(
-            dates=pred_dates,
-            prices=backtest_prices,
-            signals=signals,
-            portfolio_values=result["portfolio_values"],
-            initial_capital=bc["initial_capital"],
-            mode=mode,
-            run_tag=run_tag,
-            save_path=plot_path,
-        )
 
     output = "\n".join(lines)
     print(output)

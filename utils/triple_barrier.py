@@ -1,4 +1,26 @@
+from __future__ import annotations
+
+from pathlib import Path
+
 import pandas as pd
+
+
+def _prepare_price_data(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Normalize input price data to a sorted frame with a Date column.
+    """
+    data = df.copy()
+
+    if "Date" not in data.columns:
+        if not isinstance(data.index, pd.DatetimeIndex):
+            raise ValueError("Expected a Date column or a DatetimeIndex.")
+        data = data.reset_index()
+        if "Date" not in data.columns:
+            data = data.rename(columns={data.columns[0]: "Date"})
+
+    data["Date"] = pd.to_datetime(data["Date"])
+    data = data.sort_values("Date").reset_index(drop=True)
+    return data
 
 
 def triple_barrier_labels(
@@ -7,27 +29,26 @@ def triple_barrier_labels(
     lower_barrier,
     max_holding_period,
     price_col,
+    drop_last_incomplete: bool = False,
 ):
     """
-    Calculate labels using the triple brrier method
-    """
-    
-    # copy df
-    data = df.copy()
+    Calculate labels using the triple barrier method.
 
-    # convert date to timestamp and order
-    data["Date"] = pd.to_datetime(data["Date"])
-    data = data.sort_values("Date").reset_index(drop = True)
-        
+    Returns labels indexed by Date using the raw encoding:
+      1 = upper barrier hit first
+      0 = no barrier hit within the horizon
+     -1 = lower barrier hit first
+    """
+    data = _prepare_price_data(df)
 
     prices = data[price_col].values
 
-    highs = data["High"].values 
-    lows = data["Low"].values 
+    highs = data["High"].values
+    lows = data["Low"].values
     opens = data["Open"].values
 
     n = len(data)
-    labels = pd.Series(0, index = data.index, dtype = "int8")
+    labels = pd.Series(0, index=data["Date"], dtype="int8", name="label")
 
     for i in range(n):
         entry_price = prices[i]
@@ -66,18 +87,26 @@ def triple_barrier_labels(
             if hit_lower:
                 label = -1
                 break
-            
-
         labels.iloc[i] = label
 
-    labels.index = data.index
+    labels.index.name = "Date"
 
-    # remap labels for CrossEntropyLoss:
-    # Hold = 0, Buy = 1, Sell = 2
-    label_map = {-1: 2, 0: 0, 1: 1}
-    labels = labels.map(label_map).astype("int8")
-    
+    if drop_last_incomplete and max_holding_period > 0:
+        labels = labels.iloc[:-max_holding_period]
     return labels
+
+
+def encode_triple_barrier_labels(labels: pd.Series) -> pd.Series:
+    """
+    Map raw triple-barrier labels {-1, 0, 1} to {2, 0, 1} for classifiers.
+    """
+    unexpected = sorted(set(labels.dropna().unique()) - {-1, 0, 1})
+    if unexpected:
+        raise ValueError(f"Unexpected label values: {unexpected}")
+
+    encoded = labels.replace({-1: 2, 0: 0, 1: 1}).astype("int8")
+    encoded.name = labels.name or "label"
+    return encoded
 
 
 class TripleBarrierLabeler:
@@ -101,22 +130,31 @@ class TripleBarrierLabeler:
 
         self.df = pd.read_csv(self.file_path)
 
-    def run(self) -> pd.DataFrame:
-        
-        self.df["label"] = triple_barrier_labels(
-            self.df,
-            upper_barrier = self.upper_barrier,
-            lower_barrier = self.lower_barrier,
-            max_holding_period = self.max_holding_period,
-            price_col = self.price_col,
+    def run(self, encoded: bool = False, drop_last_incomplete: bool = False) -> pd.DataFrame:
+        data = _prepare_price_data(self.df).set_index("Date")
+        labels = triple_barrier_labels(
+            data,
+            upper_barrier=self.upper_barrier,
+            lower_barrier=self.lower_barrier,
+            max_holding_period=self.max_holding_period,
+            price_col=self.price_col,
+            drop_last_incomplete=drop_last_incomplete,
         )
 
-        return self.df
+        if encoded:
+            labels = encode_triple_barrier_labels(labels)
+
+        data["label"] = labels
+        if drop_last_incomplete:
+            data = data.loc[labels.index]
+
+        return data.reset_index()
 
 
 def main():
-    input_path = "../SPY_ohlcv_with_indicators.csv"
-    output_path = "../SPY_with_labels_triple_barrier.csv"
+    project_root = Path(__file__).resolve().parents[1]
+    input_path = project_root / "SPY_ohlcv_with_indicators.csv"
+    output_path = project_root / "SPY_with_labels_triple_barrier.csv"
 
     labeler = TripleBarrierLabeler(
         # may need to tune these hyper parameters for labeling strategies. 
@@ -125,16 +163,16 @@ def main():
             # 0    2561
             # -1    1224
             # 1    1199
-        file_path = input_path,
-        upper_barrier = 0.03,
-        lower_barrier = -0.03,
-        max_holding_period = 10,
-        price_col = "Close",
+        file_path=input_path,
+        upper_barrier=0.03,
+        lower_barrier=-0.03,
+        max_holding_period=10,
+        price_col="Close",
     )
 
-    df_labeled = labeler.run()
+    df_labeled = labeler.run(drop_last_incomplete=True)
 
-    df_labeled.to_csv(output_path, index = False)
+    df_labeled.to_csv(output_path, index=False)
 
     print("Labeling complete.")
     print(df_labeled["label"].value_counts())
