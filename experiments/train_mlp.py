@@ -12,6 +12,8 @@ import sys
 # allow running from project root
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import random
+
 import numpy as np
 import pandas as pd
 import torch
@@ -37,7 +39,7 @@ def chronological_split(n: int, train_frac: float, val_frac: float):
 
 
 def load_or_generate_labels(df, csv_path: str, price_col: str) -> "pd.Series":
-    label_path = os.path.splitext(csv_path)[0] + "_labels_mlp.csv"
+    label_path = os.path.splitext(csv_path)[0] + "_labels.csv"
     if os.path.exists(label_path):
         print(f"Loading cached labels from {label_path}")
         labels = pd.read_csv(label_path, index_col=0, parse_dates=True).squeeze()
@@ -58,6 +60,13 @@ def main():
     # derive run tag from config filename, e.g. configs/mlp_lr001.yaml → mlp_lr001
     run_tag = os.path.splitext(os.path.basename(args.config))[0]
 
+    seed = 42
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
     cfg = load_config(args.config)
     dc = cfg["data"]
     mc = cfg["model"]
@@ -72,6 +81,13 @@ def main():
     # align df to label index
     df = df.loc[labels.index]
 
+    # resolve feature_cols: ["all"] → every column except the price/label col
+    feature_cols = dc["feature_cols"]
+    if feature_cols == ["all"]:
+        exclude = {"Date", dc["price_col"]}
+        feature_cols = [c for c in df.columns if c not in exclude]
+        print(f"feature_cols=all → using {len(feature_cols)} columns: {feature_cols}")
+
     n = len(df)
     train_sl, val_sl, test_sl = chronological_split(n, dc["train_frac"], dc["val_frac"])
 
@@ -85,7 +101,6 @@ def main():
     print(f"Data split — train: {len(df_train)}, val: {len(df_val)}, test: {len(df_test)}")
 
     # convert OHLC to log-returns and volume to log-diff so features are stationary
-    feature_cols = dc["feature_cols"]
     price_cols  = [c for c in feature_cols if c != "Volume"]
     has_volume  = "Volume" in feature_cols
 
@@ -97,22 +112,22 @@ def main():
             df_out["Volume"] = np.log(df_in["Volume"] / df_in["Volume"].shift(1))
         return df_out.iloc[1:]   # drop first row (NaN from shift)
 
-    df_train = make_stationary(df_train)
-    df_val   = make_stationary(df_val)
-    df_test  = make_stationary(df_test)
+    # df_train = make_stationary(df_train)
+    # df_val   = make_stationary(df_val)
+    # df_test  = make_stationary(df_test)
 
-    # re-align labels after dropping first row of each split
-    lbl_train = lbl_train.loc[lbl_train.index.intersection(df_train.index)]
-    lbl_val   = lbl_val.loc[lbl_val.index.intersection(df_val.index)]
-    lbl_test  = lbl_test.loc[lbl_test.index.intersection(df_test.index)]
+    # # re-align labels after dropping first row of each split
+    # lbl_train = lbl_train.loc[lbl_train.index.intersection(df_train.index)]
+    # lbl_val   = lbl_val.loc[lbl_val.index.intersection(df_val.index)]
+    # lbl_test  = lbl_test.loc[lbl_test.index.intersection(df_test.index)]
 
-    # z-score normalise using train statistics only
-    means = df_train[feature_cols].mean()
-    stds  = df_train[feature_cols].std().replace(0, 1)
+    # # z-score normalise using train statistics only
+    # means = df_train[feature_cols].mean()
+    # stds  = df_train[feature_cols].std().replace(0, 1)
 
-    df_train[feature_cols] = (df_train[feature_cols] - means) / stds
-    df_val[feature_cols]   = (df_val[feature_cols]   - means) / stds
-    df_test[feature_cols]  = (df_test[feature_cols]  - means) / stds
+    # df_train[feature_cols] = (df_train[feature_cols] - means) / stds
+    # df_val[feature_cols]   = (df_val[feature_cols]   - means) / stds
+    # df_test[feature_cols]  = (df_test[feature_cols]  - means) / stds
 
     window_size = dc["window_size"]
     train_ds = SPYDataset(df_train, lbl_train, window_size, feature_cols, dc["price_col"])
@@ -202,7 +217,7 @@ def main():
         print(f"  {label_names.get(cls, cls)}: {cnt} ({cnt/len(raw_preds)*100:.1f}%)")
 
     # ------------------------------------------------- save predictions
-    out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mlp")
+    out_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "results")
     os.makedirs(out_dir, exist_ok=True)
 
     # true labels aligned with predictions: last label of each window

@@ -35,7 +35,7 @@ def main():
 
     run_tag = os.path.splitext(os.path.basename(args.config))[0]
     default_predictions = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "mlp", f"{run_tag}_test_predictions.csv"
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "results", f"{run_tag}_test_predictions.csv"
     )
 
     cfg = load_config(args.config)
@@ -75,39 +75,46 @@ def main():
     label_names = {0: "Hold", 1: "Long", 2: "Short"}
     target_names = [label_names[i] for i in sorted(label_names)]
 
-    print("\nPrediction distribution:")
+    lines = []
+
+    lines.append(f"Run: {run_tag}")
+    lines.append(f"Predictions: {args.predictions}")
+    lines.append(f"Samples: {len(preds_df)}")
+    lines.append("")
+
+    lines.append("Prediction distribution:")
     unique, counts = np.unique(raw_preds, return_counts=True)
     for cls, cnt in zip(unique, counts):
-        print(f"  {label_names.get(cls, cls)}: {cnt} ({cnt/len(raw_preds)*100:.1f}%)")
+        lines.append(f"  {label_names.get(cls, cls)}: {cnt} ({cnt/len(raw_preds)*100:.1f}%)")
+    lines.append("")
 
-    print()
-    print(classification_report(true_labels, raw_preds, target_names=target_names, digits=3))
+    lines.append(classification_report(true_labels, raw_preds, target_names=target_names, digits=3))
 
-    print("Confusion matrix (rows=true, cols=pred):")
+    lines.append("Confusion matrix (rows=true, cols=pred):")
     cm = confusion_matrix(true_labels, raw_preds, labels=[0, 1, 2])
     header = f"{'':>8}" + "".join(f"{n:>8}" for n in target_names)
-    print(header)
+    lines.append(header)
     for i, row in enumerate(cm):
-        print(f"{target_names[i]:>8}" + "".join(f"{v:>8}" for v in row))
+        lines.append(f"{target_names[i]:>8}" + "".join(f"{v:>8}" for v in row))
+    lines.append("")
 
     # --------------------------------------------------------- backtest
-    print()
+    results_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "results")
+    os.makedirs(results_dir, exist_ok=True)
+
     for mode in bc["modes"]:
         bt = Backtester(backtest_prices, initial_capital=bc["initial_capital"], mode=mode)
         result = bt.run(signals)
         m = bt.metrics(result["portfolio_values"], benchmark_values=result["benchmark_values"])
-
-        out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mlp")
-        os.makedirs(out_dir, exist_ok=True)
         curve_dates = pred_dates
-        curve_path = os.path.join(out_dir, f"{run_tag}_{mode}_backtest_curve.csv")
+        curve_path = os.path.join(results_dir, f"{run_tag}_{mode}_backtest_curve.csv")
         save_equity_curve_csv(
             curve_path,
             curve_dates,
             result["portfolio_values"],
             result["benchmark_values"],
         )
-        plot_path = os.path.join(out_dir, f"{run_tag}_{mode}_backtest_plot.png")
+        plot_path = os.path.join(results_dir, f"{run_tag}_{mode}_backtest_plot.png")
         plot_saved = False
         try:
             plot_equity_curves(
@@ -122,23 +129,31 @@ def main():
             )
             plot_saved = True
         except ImportError as exc:
-            print(f"  Plot skipped:           {exc}")
+            lines.append(f"  Plot skipped:           {exc}")
 
-        print(f"--- Backtest: {mode} ---")
-        print(f"  Initial capital:       ${bc['initial_capital']:,.2f}")
-        print(f"  Strategy final value:  ${result['final_value']:,.2f}")
-        print(f"  Benchmark final value: ${result['benchmark_final_value']:,.2f}")
-        print(f"  Total return:          {m['total_return']*100:+.2f}%")
-        print(f"  Benchmark return:      {m['benchmark_return']*100:+.2f}%")
-        print(f"  Sharpe ratio:          {m['sharpe_ratio']:.3f}")
-        print(f"  Max drawdown:          {m['max_drawdown']*100:.2f}%")
-        print(f"  Benchmark max drawdown:{m['benchmark_max_drawdown']*100:.2f}%")
-        print(f"  Win rate:              {m['win_rate']*100:.1f}%")
-        print(f"  Profit factor:         {m['profit_factor']:.3f}")
-        print(f"  Saved equity curve to: {curve_path}")
+        lines.append(f"--- Backtest: {mode} ---")
+        lines.append(f"  Initial capital:       ${bc['initial_capital']:,.2f}")
+        lines.append(f"  Strategy final value:  ${result['final_value']:,.2f}")
+        lines.append(f"  Benchmark final value: ${result['benchmark_final_value']:,.2f}")
+        lines.append(f"  Total return:          {m['total_return']*100:+.2f}%")
+        lines.append(f"  Benchmark return:      {m['benchmark_return']*100:+.2f}%")
+        lines.append(f"  Sharpe ratio:          {m['sharpe_ratio']:.3f}")
+        lines.append(f"  Max drawdown:          {m['max_drawdown']*100:.2f}%")
+        lines.append(f"  Benchmark max drawdown:{m['benchmark_max_drawdown']*100:.2f}%")
+        lines.append(f"  Win rate:              {m['win_rate']*100:.1f}%")
+        lines.append(f"  Profit factor:         {m['profit_factor']:.3f}")
+        lines.append(f"  Saved equity curve to: {curve_path}")
         if plot_saved:
-            print(f"  Saved plot to:         {plot_path}")
-        print()
+            lines.append(f"  Saved plot to:         {plot_path}")
+        lines.append("")
+
+    output = "\n".join(lines)
+    print(output)
+
+    results_path = os.path.join(results_dir, f"{run_tag}_backtest_results.txt")
+    with open(results_path, "w") as f:
+        f.write(output)
+    print(f"Saved results → {results_path}")
 
 
 if __name__ == "__main__":

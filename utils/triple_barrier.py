@@ -93,7 +93,6 @@ def triple_barrier_labels(
 
     if drop_last_incomplete and max_holding_period > 0:
         labels = labels.iloc[:-max_holding_period]
-
     return labels
 
 

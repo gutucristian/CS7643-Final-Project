@@ -1,0 +1,26 @@
+data:
+  csv_path: SPY_ohlcv_with_indicators.csv
+  feature_cols: [all]
+  price_col: Close
+  window_size: 20
+  train_frac: 0.7
+  val_frac: 0.15
+
+model:
+  hidden_sizes: [256, 128, 64]
+  dropout: 0.3
+  num_classes: 3
+
+training:
+  batch_size: 64
+  epochs: 30
+  learning_rate: 0.001
+  loss: sharpe          # one of: cross_entropy, sharpe
+  device: auto          # auto | cpu | cuda
+
+backtest:
+  initial_capital: 10000
+  modes: [long_only, long_short]
+
+checkpoint:
+  dir: checkpoints
