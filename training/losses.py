@@ -15,6 +15,7 @@ Approach 2 — sharpe_loss: differentiable negative Sharpe ratio that maps
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class _CrossEntropyLoss(nn.Module):
@@ -24,6 +25,32 @@ class _CrossEntropyLoss(nn.Module):
 
     def forward(self, logits: torch.Tensor, labels: torch.Tensor, fwd_returns: torch.Tensor) -> torch.Tensor:
         return self._ce(logits, labels)
+
+
+class _FocalLoss(nn.Module):
+    def __init__(self, gamma: float = 2.0, alpha: torch.Tensor = None):
+        super().__init__()
+        if gamma < 0:
+            raise ValueError(f"gamma must be >= 0, got {gamma}")
+        self.gamma = gamma
+        if alpha is not None:
+            self.register_buffer("alpha", alpha)
+        else:
+            self.alpha = None
+
+    def forward(self, logits: torch.Tensor, labels: torch.Tensor, fwd_returns: torch.Tensor) -> torch.Tensor:
+        log_probs = F.log_softmax(logits, dim=-1)
+        log_pt = log_probs.gather(dim=1, index=labels.unsqueeze(1)).squeeze(1)
+        pt = log_pt.exp()
+
+        ce = F.nll_loss(
+            log_probs,
+            labels,
+            weight=self.alpha,
+            reduction="none",
+        )
+        loss = ((1.0 - pt) ** self.gamma) * ce
+        return loss.mean()
 
 
 class _SharpeLoss(nn.Module):
@@ -41,20 +68,58 @@ class _SharpeLoss(nn.Module):
         return -mean / std  # minimise negative Sharpe
 
 
-def cross_entropy_loss(class_counts: list = None, num_classes: int = 3) -> nn.Module:
+def cross_entropy_loss(
+    class_counts: list = None,
+    num_classes: int = 3,
+    class_weight_multipliers: list = None,
+) -> nn.Module:
     """Return a CrossEntropyLoss with the unified (logits, labels, returns) signature.
 
     Args:
         class_counts: list of per-class sample counts. If provided, weights are
                       set to 1/count (normalized), so rare classes get higher weight.
         num_classes: total number of classes (used only when class_counts is None).
+        class_weight_multipliers: optional per-class multipliers applied after the
+                                  inverse-frequency weights, e.g. [1.0, 1.0, 1.25].
     """
     weight = None
     if class_counts is not None:
         counts = torch.tensor(class_counts, dtype=torch.float)
         weight = 1.0 / counts
+        if class_weight_multipliers is not None:
+            multipliers = torch.tensor(class_weight_multipliers, dtype=torch.float)
+            if len(multipliers) != num_classes:
+                raise ValueError(
+                    f"class_weight_multipliers must have length {num_classes}, "
+                    f"got {len(multipliers)}"
+                )
+            weight = weight * multipliers
         weight = weight / weight.sum() * num_classes   # normalize so avg weight == 1
     return _CrossEntropyLoss(weight=weight)
+
+
+def focal_loss(
+    num_classes: int = 3,
+    gamma: float = 2.0,
+    alpha: list = None,
+) -> nn.Module:
+    """Return a focal loss with the unified (logits, labels, returns) signature.
+
+    Args:
+        num_classes: total number of classes.
+        gamma: focusing parameter; larger values emphasize hard examples more.
+        alpha: optional per-class weights, e.g. [1.0, 1.0, 1.25].
+    """
+    alpha_tensor = None
+    if alpha is not None:
+        alpha_tensor = torch.tensor(alpha, dtype=torch.float)
+        if len(alpha_tensor) != num_classes:
+            raise ValueError(
+                f"alpha must have length {num_classes}, got {len(alpha_tensor)}"
+            )
+        alpha_tensor = alpha_tensor / alpha_tensor.sum() * num_classes
+
+    return _FocalLoss(gamma=gamma, alpha=alpha_tensor)
 
 
 def sharpe_loss() -> nn.Module:

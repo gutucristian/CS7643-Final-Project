@@ -163,12 +163,6 @@ def compute_all_indicators(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def compute_cnn_features(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Compute a compact, mostly scale-free feature set for CNN training.
-
-    The returned frame contains indicator features only and excludes raw
-    OHLCV columns so the model input stays focused on the engineered signals.
-    """
     out = df.copy()
     out = add_returns(out)
     out = add_sma(out)

@@ -23,7 +23,7 @@ from torch.utils.data import DataLoader
 
 from data.dataset import SPYDataset
 from models.cnn.model import CNN1D
-from training.losses import cross_entropy_loss, sharpe_loss
+from training.losses import cross_entropy_loss, focal_loss, sharpe_loss
 from training.trainer import Trainer, resolve_device
 
 
@@ -157,12 +157,27 @@ def main():
     device = resolve_device(tc["device"])
     optimizer = torch.optim.Adam(model.parameters(), lr=tc["learning_rate"])
 
-    if tc["loss"] == "sharpe":
+    if tc["loss"] == "focal":
+        print(f"Focal gamma: {tc.get('focal_gamma', 2.0)}")
+        if tc.get("focal_alpha") is not None:
+            print(f"Focal alpha: {tc['focal_alpha']}")
+        criterion = focal_loss(
+            num_classes=mc["num_classes"],
+            gamma=tc.get("focal_gamma", 2.0),
+            alpha=tc.get("focal_alpha"),
+        )
+    elif tc["loss"] == "sharpe":
         criterion = sharpe_loss()
     else:
         class_counts = [int((lbl_train == c).sum()) for c in range(mc["num_classes"])]
         print(f"Train label counts — Hold: {class_counts[0]}, Buy: {class_counts[1]}, Sell: {class_counts[2]}")
-        criterion = cross_entropy_loss(class_counts=class_counts, num_classes=mc["num_classes"])
+        if tc.get("class_weight_multipliers") is not None:
+            print(f"Class weight multipliers: {tc['class_weight_multipliers']}")
+        criterion = cross_entropy_loss(
+            class_counts=class_counts,
+            num_classes=mc["num_classes"],
+            class_weight_multipliers=tc.get("class_weight_multipliers"),
+        )
     print(f"Loss: {tc['loss']}  |  Device: {device}")
 
     trainer = Trainer(model, optimizer, criterion, device)
