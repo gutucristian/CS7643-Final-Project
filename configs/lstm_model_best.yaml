@@ -2,18 +2,15 @@ data:
   csv_path: SPY_with_labels_triple_barrier.csv
   feature_cols:
     [
-      Open, High, Low, Close, Volume, return_1d, log_return_1d,
-      close_sma_ratio_5, close_sma_ratio_10, close_sma_ratio_20, close_sma_ratio_50,
-      rsi_14, macd, macd_signal, macd_hist, bbp_20, momentum_5, momentum_10, momentum_20,
-      volatility_5, volatility_10, volatility_20, volume_ratio_5, volume_ratio_20
+      return_1d, log_return_1d, close_sma_ratio_5, close_sma_ratio_10, 
+      close_sma_ratio_20, close_sma_ratio_50, momentum_5, momentum_10, momentum_20
     ]
   window_size: 30
   train_frac: 0.7
   val_frac: 0.15
   price_col: Close
-  label_col: label
+  label_col: label_tb_fixed_up2_down2_10d
   return_horizon: 10
-
 
 model:
   hidden_size: 64
@@ -23,9 +20,10 @@ model:
   head_hidden_size: 64
   num_classes: 3
 
+
 training:
   batch_size: 64
-  epochs: 30
+  epochs: 12
   learning_rate: 0.001
   weight_decay: 0.0001
   grad_clip: 1.0
@@ -33,17 +31,16 @@ training:
   focal_gamma: 2.0
   device: auto
 
-
 labeling:
   upper_barrier: 0.03
   lower_barrier: -0.03
   max_holding_period: 10
 
+
 backtest:
   initial_capital: 10000
-
 
 checkpoint:
   dir: checkpoints
 
-
+  

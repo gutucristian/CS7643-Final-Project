@@ -8,7 +8,8 @@ This keeps the Trainer loss-agnostic — switching between cross-entropy and
 Sharpe is a one-line change in the training script.
 
 Approach 1 — cross_entropy_loss: standard categorical cross-entropy.
-Approach 2 — sharpe_loss: differentiable negative Sharpe ratio that maps
+Approach 2 — focal_loss: class-weighted focal loss for imbalanced classification.
+Approach 3 — sharpe_loss: differentiable negative Sharpe ratio that maps
     model output probabilities to a continuous position in [-1, 1] and
     optimises directly for risk-adjusted returns (ignores labels).
 """
@@ -60,7 +61,7 @@ class _SharpeLoss(nn.Module):
 
     def forward(self, logits: torch.Tensor, labels: torch.Tensor, fwd_returns: torch.Tensor) -> torch.Tensor:
         probs = torch.softmax(logits, dim=-1)  # (B, 3): [Hold, Long, Short]
-        # position: long → +1, short → -1, hold → 0
+        # position: long -> +1, short -> -1, hold -> 0
         position = probs[:, 1] - probs[:, 2]   # in (-1, 1)
         strategy_returns = position * fwd_returns
         mean = strategy_returns.mean()
