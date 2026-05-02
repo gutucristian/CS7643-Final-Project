@@ -10,17 +10,18 @@ import numpy as np
 import pandas as pd
 import torch
 import yaml
+import shutil
 from torch.utils.data import Dataset, DataLoader
 
 # fix path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models.lstm.model import LSTMModel
-from training.losses import cross_entropy_loss, sharpe_loss
+from training.losses import cross_entropy_loss, focal_loss, sharpe_loss
 from training.trainer import Trainer
 
 
 class SequenceDataset(Dataset):
-    #prep time series data and get forward looking return
+    # prep time series data and get forward looking return
 
     def __init__(
         self, df_features, labels,
@@ -67,6 +68,7 @@ def load_config(path):
         return yaml.safe_load(f)
 
 
+# get device/resources
 def resolve_device(device_str):
     if device_str == "auto":
 
@@ -89,15 +91,70 @@ def split(n, train_frac, val_frac):
     return slice1, slice2, slice3
 
 
+def build_run_dirs(project_root: str, run_tag: str):
+    experiments_root = os.path.join(project_root, "results", "lstm_experiments")
+    run_dir = os.path.join(experiments_root, run_tag)
+    return experiments_root, run_dir
+
+
+def train_one_epoch(model, dataloader, optimizer, criterion, device, grad_clip=None):
+    model.train()
+    total_loss = 0.0
+
+    for windows, labels, fwd_returns in dataloader:
+        windows = windows.to(device)
+        labels = labels.to(device)
+        fwd_returns = fwd_returns.to(device)
+
+        optimizer.zero_grad()
+        logits = model(windows)
+        loss = criterion(logits, labels, fwd_returns)
+        loss.backward()
+        if grad_clip is not None:
+            torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
+        optimizer.step()
+
+        total_loss += loss.item() * len(labels)
+
+    return total_loss / len(dataloader.dataset)
+
+
+def predict_prob(model, dataloader, device):
+    # heloper functiont to run inferences
+    model.eval()
+    all_probs = []
+
+    with torch.no_grad():
+
+        for w, l, f in dataloader:
+            w = w.to(device)
+
+            # get logits
+            logits = model(w)
+            
+            probs = torch.softmax(
+                logits,
+                dim =- 1
+            ).cpu().numpy()
+
+            all_probs.append(probs)
+
+    return np.concatenate(all_probs, axis=0)
+
+
 def main():
     # create parse and add args for processing
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--config", 
         type = str, 
-        default = "configs/lst_base.yaml"
+        default = "configs/lstm_base.yaml"
     )
     args = parser.parse_args()
+    run_tag = os.path.splitext(os.path.basename(args.config))[0]
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    experiments_root, run_dir = build_run_dirs(project_root, run_tag)
+    os.makedirs(run_dir, exist_ok=True)
 
     config = load_config(args.config)
 
@@ -105,6 +162,7 @@ def main():
     data_info = config["data"]
     csv_path = data_info["csv_path"]
     feature_cols = data_info["feature_cols"]
+    label_col = data_info.get("label_col", "label")
     window_size = data_info["window_size"]
     train_frac = data_info["train_frac"]
     val_frac = data_info["val_frac"]
@@ -122,7 +180,10 @@ def main():
     df["Date"] = pd.to_datetime(df["Date"])
     df = df.sort_values("Date").reset_index(drop = True)
 
-    labels = df["label"].astype(int)
+    if label_col not in df.columns:
+        raise ValueError(f"Label column '{label_col}' not found in {csv_path}")
+
+    labels = df[label_col].astype(int)
     features_df = df[feature_cols].copy()
     raw_prices = df[price_col].copy()
 
@@ -131,6 +192,7 @@ def main():
     label_counts = labels.value_counts().sort_index()
 
     print(f"Total rows: {len(df)}")
+    print(f"Using label column: {label_col}")
     print("\nLabel counts:")
     print(label_counts)
     print("\nLabel percentages:")
@@ -201,7 +263,9 @@ def main():
         hidden_size = model_config["hidden_size"],
         num_layers = model_config["num_layers"],
         num_classes = model_config["num_classes"],
-        dropout = model_config["dropout"]
+        dropout = model_config["dropout"],
+        pooling = model_config.get("pooling", "mean"),
+        head_hidden_size = model_config.get("head_hidden_size"),
     )
 
     device = resolve_device(training_config["device"])
@@ -218,16 +282,28 @@ def main():
         class_counts = [int((y_train == c).sum()) for c in range(model_config["num_classes"])]
         print(f"\nTraining label counts -> Hold: {class_counts[0]}, Buy: {class_counts[1]}, Sell: {class_counts[2]}")
 
-        criterion = cross_entropy_loss(
-            class_counts = class_counts,
-            num_classes = model_config["num_classes"]
-        )
+        if training_config["loss"] == "focal": # focal loss
+            focal_gamma = float(training_config.get("focal_gamma", 2.0))
+            
+            print(f"Using focal loss with gamma = {focal_gamma}")
+            
+            criterion = focal_loss(
+                class_counts = class_counts,
+                num_classes = model_config["num_classes"],
+                gamma = focal_gamma,
+            )
+
+        else: # default to cross entropy
+            criterion = cross_entropy_loss(
+                class_counts = class_counts,
+                num_classes = model_config["num_classes"]
+            )
 
     trainer = Trainer(model, optimizer, criterion, device)
 
     os.makedirs(checkpoint_config["dir"], exist_ok = True)
 
-    checkpoint_path = os.path.join(checkpoint_config["dir"], "lstm_best.pt")
+    checkpoint_path = os.path.join(checkpoint_config["dir"], f"{run_tag}_best.pt")
 
     best_val_loss = float("inf")
 
@@ -235,10 +311,17 @@ def main():
 
     for epoch in range(1, training_config["epochs"] + 1):
 
-        history = trainer.train(train_loader, epochs=1)
+        train_loss = train_one_epoch(
+            model,
+            train_loader,
+            optimizer,
+            criterion,
+            trainer.device,
+            grad_clip = training_config.get("grad_clip"),
+        )
+
         val_metrics = trainer.evaluate(val_loader)
 
-        train_loss = history["train_loss"][0]
         val_loss = val_metrics["loss"]
         val_acc = val_metrics["accuracy"]
 
@@ -271,8 +354,50 @@ def main():
 
     test_metrics = trainer.evaluate(test_loader)
 
-    print(f"\nTest results | loss={test_metrics['loss']:.4f} | acc={test_metrics['accuracy']:.4f}")
+    print(f"\nTest results | loss = {test_metrics['loss']:.4f} | acc = {test_metrics['accuracy']:.4f}")
+
+    raw_preds = trainer.predict(test_loader)
+    pred_probs = predict_prob(model, test_loader, trainer.device)
+
+    # get pred start and end
+    pred_start = window_size - 1
+    pred_end = len(y_test) - return_horizon
+
+    # get actual vs pred
+    true_labels = y_test.iloc[pred_start:pred_end].values
+    pred_dates = df.iloc[test_sl]["Date"].iloc[pred_start:pred_end].values
+
+    if len(raw_preds) != len(true_labels):
+        raise ValueError(f"Prediction alignment mismatch: got {len(raw_preds)} preds but {len(true_labels)} labels.")
+
+    res_df_input = {
+        "true_label": true_labels,
+        "pred_label": raw_preds,
+        "prob_hold": pred_probs[:, 0],
+        "prob_long": pred_probs[:, 1],
+        "prob_short": pred_probs[:, 2],
+        "position_score": pred_probs[:, 1] - pred_probs[:, 2]
+    }
+
+    results_df = pd.DataFrame(res_df_input, index = pd.to_datetime(pred_dates))
+
+
+    results_path = os.path.join(run_dir, "test_predictions.csv")
+    results_df.to_csv(results_path)
+    
+    print(f"Saved test labels + predictions to: {results_path}")
+
+    config_copy_path = os.path.join(run_dir, "config.yaml")
+    
+    shutil.copyfile(args.config, config_copy_path)
+    
+    print(f"Saved run config to: {config_copy_path}")
 
 
 if __name__ == "__main__":
     main()
+
+
+
+
+

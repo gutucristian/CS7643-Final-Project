@@ -1,0 +1,53 @@
+# configuration for different experiments to run
+
+base_config: configs/lstm_base.yaml
+
+training_overrides:
+  epochs: 30
+
+# experiment with different labeling strategies
+label_variants:
+  fixed_3pct_10d: label
+  fixed_2pct_10d: label_tb_fixed_up2_down2_10d
+  vol20_k2_10d: label_tb_vol_w20_k2p0_10d
+
+# different sets of features to use
+feature_sets:
+  # prices
+  ohlcv:
+    [Open, High, Low, Close, Volume]
+
+  # returns
+  ohlcv_returns: 
+    [Open, High, Low, Close, Volume, return_1d, log_return_1d]
+
+  # trend/momentum indicators
+  trend_momentum:
+    [
+      return_1d, log_return_1d, close_sma_ratio_5, close_sma_ratio_10, 
+      close_sma_ratio_20, close_sma_ratio_50, momentum_5, momentum_10, momentum_20
+    ]
+  
+  # core technical indicators
+  technical_core:
+    [
+      return_1d, log_return_1d,
+      close_sma_ratio_5, close_sma_ratio_10, close_sma_ratio_20, close_sma_ratio_50,
+      rsi_14, macd, macd_signal, macd_hist, bbp_20, momentum_5, momentum_10, momentum_20,
+      volatility_5, volatility_10, volatility_20, volume_ratio_5, volume_ratio_20
+    ]
+  
+  # all indicators/features
+  all: 
+    [
+      Open, High, Low, Close, Volume, return_1d, log_return_1d,
+      close_sma_ratio_5, close_sma_ratio_10, close_sma_ratio_20, close_sma_ratio_50,
+      rsi_14, macd, macd_signal, macd_hist, bbp_20, momentum_5, momentum_10, momentum_20,
+      volatility_5, volatility_10, volatility_20, volume_ratio_5, volume_ratio_20
+    ]
+
+# differnt loss functions to try
+losses:
+  - cross_entropy
+  - focal
+  - sharpe
