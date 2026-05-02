@@ -417,12 +417,14 @@ def main():
     tb_plot_path = os.path.join(run_dir, "classifier_semantic_plot.png")
     tb_curve_path = os.path.join(run_dir, "classifier_semantic_curve.csv")
 
+    # get plots for backtest
     save_equity_curve_csv(
         tb_curve_path,
         tb_result["dates"],
         tb_result["portfolio_values"],
         tb_result["benchmark_values"],
     )
+
     plot_equity_curves(
         tb_plot_path,
         tb_result["dates"],
