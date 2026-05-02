@@ -58,7 +58,7 @@ def plot_equity_curves(
     benchmark_label: str = "Buy & Hold SPY",
     initial_capital: float | None = None,
 ) -> Path:
-    dates = pd.to_datetime(dates)
+    dates = pd.to_datetime(dates).to_numpy()
     strategy_values = np.asarray(strategy_values, dtype=float)
     benchmark_values = np.asarray(benchmark_values, dtype=float)
 
@@ -90,12 +90,12 @@ def plot_equity_curves(
         f"{benchmark_label}: ${benchmark_final:,.0f}"
     )
     ax.text(
-        0.02,
+        0.98,
         0.98,
         summary,
         transform=ax.transAxes,
         va="top",
-        ha="left",
+        ha="right",
         fontsize=10,
         bbox={"boxstyle": "round,pad=0.4", "facecolor": "white", "alpha": 0.9, "edgecolor": "#d1d5db"},
     )
@@ -104,10 +104,14 @@ def plot_equity_curves(
     ax.set_xlabel("Date")
     ax.set_ylabel("Portfolio Value ($)")
     ax.yaxis.set_major_formatter(FuncFormatter(lambda x, _: f"${x:,.0f}"))
+    y_min = min(strategy_values.min(), benchmark_values.min())
+    y_max = max(strategy_values.max(), benchmark_values.max())
+    y_range = max(y_max - y_min, 1.0)
+    ax.set_ylim(y_min - 0.03 * y_range, y_max + 0.12 * y_range)
     ax.xaxis.set_major_locator(mdates.AutoDateLocator())
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
     ax.grid(True, linestyle="--", linewidth=0.6, alpha=0.35)
-    ax.legend(frameon=False)
+    ax.legend(frameon=False, loc="upper left")
 
     fig.autofmt_xdate()
     fig.tight_layout()

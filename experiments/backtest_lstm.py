@@ -11,11 +11,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import numpy as np
 import pandas as pd
 import yaml
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
 from sklearn.metrics import classification_report, confusion_matrix
+from backtest.plotting import plot_equity_curves, save_equity_curve_csv
 from data.data_utils import load_ohlcv_csv
 
 
@@ -218,53 +215,6 @@ def run_triple_barrier_backtest(
     return backtest_results
 
 
-def plot_backtest(
-    dates,
-    closes,
-    signal_dates,
-    signals,
-    portfolio_values,
-    benchmark_values,
-    run_tag: str,
-    title: str,
-    save_path: str,
-):
-    dates = pd.to_datetime(dates).to_numpy()
-    signal_dates = pd.to_datetime(signal_dates).to_numpy()
-    closes = np.asarray(closes, dtype=float)
-    signals = np.asarray(signals, dtype=float)
-    portfolio_values = np.asarray(portfolio_values, dtype=float)
-    benchmark_values = np.asarray(benchmark_values, dtype=float)
-
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 8), sharex=True)
-    fig.suptitle(f"{run_tag}  |  {title}", fontsize=13, fontweight="bold")
-
-    ax1.plot(dates, closes, color="#555555", linewidth=0.9, label="Close")
-    long_idx = np.where(signals > 0)[0]
-    short_idx = np.where(signals < 0)[0]
-    if len(long_idx) > 0:
-        ax1.scatter(signal_dates[long_idx], closes[long_idx], marker="^", color="#16a34a", s=35, label="Long")
-    if len(short_idx) > 0:
-        ax1.scatter(signal_dates[short_idx], closes[short_idx], marker="v", color="#dc2626", s=35, label="Short")
-    ax1.set_ylabel("Close ($)")
-    ax1.legend(loc="upper left", fontsize=8)
-    ax1.grid(True, alpha=0.3)
-
-    ax2.plot(dates, portfolio_values, color="#2563eb", linewidth=1.2, label="Strategy")
-    ax2.plot(dates, benchmark_values, color="#f59e0b", linewidth=1.0, linestyle="--", label="Buy & Hold")
-    ax2.set_ylabel("Portfolio Value ($)")
-    ax2.set_xlabel("Date")
-    ax2.legend(loc="upper left", fontsize=8)
-    ax2.grid(True, alpha=0.3)
-    ax2.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
-    ax2.xaxis.set_major_locator(mdates.AutoDateLocator())
-    fig.autofmt_xdate(rotation=30)
-
-    plt.tight_layout()
-    plt.savefig(save_path, dpi=150, bbox_inches="tight")
-    plt.close(fig)
-
-
 def format_metrics(lines, name: str, metrics: dict):
 
     lines.append(f"--- {name} ---")
@@ -465,17 +415,23 @@ def main():
     format_metrics(lines, "Backtest: Classifier / Triple Barrier", tb_result["metrics"])
 
     tb_plot_path = os.path.join(run_dir, "classifier_semantic_plot.png")
+    tb_curve_path = os.path.join(run_dir, "classifier_semantic_curve.csv")
 
-    plot_backtest(
-        dates = tb_result["dates"],
-        closes = eval_closes[: len(tb_result["dates"])],
-        signal_dates = pred_dates,
-        signals = class_signals,
-        portfolio_values = tb_result["portfolio_values"],
-        benchmark_values = tb_result["benchmark_values"],
-        run_tag = run_tag,
-        title = "Classifier / Triple Barrier",
-        save_path = tb_plot_path,
+    save_equity_curve_csv(
+        tb_curve_path,
+        tb_result["dates"],
+        tb_result["portfolio_values"],
+        tb_result["benchmark_values"],
+    )
+    plot_equity_curves(
+        tb_plot_path,
+        tb_result["dates"],
+        tb_result["portfolio_values"],
+        tb_result["benchmark_values"],
+        title = "LSTM Backtest vs Buy-and-Hold",
+        strategy_label = "LSTM Strategy",
+        benchmark_label = "Buy & Hold SPY",
+        initial_capital = back_test["initial_capital"],
     )
 
     output = "\n".join(lines)
@@ -514,5 +470,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 

@@ -17,18 +17,18 @@ Prediction distribution:
    macro avg      0.429     0.474     0.431       709
 weighted avg      0.467     0.439     0.441       709
 
-Confusion matrix (rows=true, cols=pred):
+Confusion matrix (rows = true, cols = pred):
             Hold    Long   Short
     Hold      69      17      24
     Long      93     152      95
    Short      59     110      90
 
 --- Backtest: Classifier / Triple Barrier ---
-  Total return:          +42.62%
-  Benchmark return:      +36.43%
-  Sharpe ratio:          0.877
-  Max drawdown:          -13.35%
-  Benchmark max drawdown:-22.75%
-  Win rate:              40.7%
-  Profit factor:         1.179
-  Trades taken:          92
+  Total return:           +42.62%
+  Benchmark return:       +36.43%
+  Sharpe ratio:           0.877
+  Max drawdown:           -13.35%
+  Benchmark max drawdown: -22.75%
+  Win rate:               40.7%
+  Profit factor:          1.179
+  Trades taken:           92
