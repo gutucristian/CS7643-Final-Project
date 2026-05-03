@@ -1,0 +1,33 @@
+Run: lstm_base
+Predictions: /Users/jakobloedding/Documents/Georgia_Tech/CS7643/project/CS7643-Final-Project/results/lstm_experiments/lstm_base/test_predictions.csv
+Samples: 709
+
+Prediction distribution:
+  Long: 352 (49.6%)
+  Short: 357 (50.4%)
+
+              precision    recall  f1-score   support
+
+        Hold      0.000     0.000     0.000       288
+        Long      0.432     0.639     0.515       238
+       Short      0.230     0.448     0.304       183
+
+    accuracy                          0.330       709
+   macro avg      0.221     0.362     0.273       709
+weighted avg      0.204     0.330     0.251       709
+
+Confusion matrix (rows = true, cols = pred):
+            Hold    Long   Short
+    Hold       0      99     189
+    Long       0     152      86
+   Short       0     101      82
+
+--- Backtest: Classifier / Triple Barrier ---
+  Total return:           +19.82%
+  Benchmark return:       +36.43%
+  Sharpe ratio:           0.466
+  Max drawdown:           -17.34%
+  Benchmark max drawdown: -22.75%
+  Win rate:               48.7%
+  Profit factor:          1.082
+  Trades taken:           105
