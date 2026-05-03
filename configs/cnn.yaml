@@ -37,8 +37,8 @@ training:
   batch_size: 64
   epochs: 30
   learning_rate: 0.0003
-  loss: focal           # one of: cross_entropy, focal, sharpe
-  device: auto          # auto | cpu | cuda
+  loss: focal
+  device: auto
   class_weight_multipliers: null
   focal_gamma: 2.0
   focal_alpha: null
