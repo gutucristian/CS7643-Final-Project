@@ -170,7 +170,7 @@ def main():
         criterion = sharpe_loss()
     else:
         class_counts = [int((lbl_train == c).sum()) for c in range(mc["num_classes"])]
-        print(f"Train label counts — Hold: {class_counts[0]}, Buy: {class_counts[1]}, Sell: {class_counts[2]}")
+        print(f"Train label counts — Hold: {class_counts[0]}, Long: {class_counts[1]}, Short: {class_counts[2]}")
         if tc.get("class_weight_multipliers") is not None:
             print(f"Class weight multipliers: {tc['class_weight_multipliers']}")
         criterion = cross_entropy_loss(
@@ -227,7 +227,7 @@ def main():
 
     raw_preds = trainer.predict(test_loader)
     unique, counts = np.unique(raw_preds, return_counts=True)
-    label_names = {0: "Hold", 1: "Buy", 2: "Sell"}
+    label_names = {0: "Hold", 1: "Long", 2: "Short"}
     print("Prediction distribution:")
     for cls, cnt in zip(unique, counts):
         print(f"  {label_names.get(cls, cls)}: {cnt} ({cnt/len(raw_preds)*100:.1f}%)")
@@ -240,7 +240,7 @@ def main():
 
     cm = confusion_matrix(true_labels, raw_preds, labels=[0, 1, 2])
     print("\nConfusion matrix (rows=true, cols=pred):")
-    print("          Hold   Buy  Sell")
+    print("          Hold  Long Short")
     for idx, row in enumerate(cm):
         print(f"{label_names[idx]:>5} {row}")
 
@@ -248,7 +248,7 @@ def main():
         true_labels,
         raw_preds,
         labels=[0, 1, 2],
-        target_names=["Hold", "Buy", "Sell"],
+        target_names=["Hold", "Long", "Short"],
         digits=4,
         zero_division=0,
     )

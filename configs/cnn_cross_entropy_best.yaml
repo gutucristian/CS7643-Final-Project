@@ -37,11 +37,9 @@ training:
   batch_size: 64
   epochs: 30
   learning_rate: 0.0003
-  loss: focal
+  loss: cross_entropy
   device: auto
   class_weight_multipliers: null
-  focal_gamma: 2.0
-  focal_alpha: null
 
 backtest:
   initial_capital: 10000

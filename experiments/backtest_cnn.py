@@ -89,7 +89,7 @@ def main():
     signal_map = {0: 0, 1: 1, 2: -1}
     signals = np.array([signal_map[p] for p in raw_preds], dtype=int)
 
-    label_names = {0: "Hold", 1: "Buy", 2: "Sell"}
+    label_names = {0: "Hold", 1: "Long", 2: "Short"}
     target_names = [label_names[i] for i in sorted(label_names)]
 
     print("\nPrediction distribution:")
