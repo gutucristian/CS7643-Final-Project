@@ -1,0 +1,49 @@
+data:
+  csv_path: SPY_cnn_training_data.csv
+  raw_price_csv_path: SPY_ohlcv.csv
+  price_col: Close
+  feature_cols:
+    - log_return_1d
+    - close_sma_ratio_5
+    - close_sma_ratio_10
+    - close_sma_ratio_20
+    - close_sma_ratio_50
+    - rsi_14
+    - macd_hist_norm
+    - bbp_20
+    - momentum_5
+    - momentum_10
+    - momentum_20
+    - volatility_5
+    - volatility_10
+    - volatility_20
+    - volume_ratio_5
+    - volume_ratio_20
+  label_col: label
+  fwd_return_col: log_return_1d
+  fwd_return_kind: log
+  window_size: 20
+  train_frac: 0.7
+  val_frac: 0.15
+
+model:
+  conv_channels: [64, 128]
+  kernel_size: 3
+  hidden_dim: 64
+  dropout: 0.3
+  num_classes: 3
+
+training:
+  batch_size: 64
+  epochs: 30
+  learning_rate: 0.0003
+  loss: cross_entropy
+  device: auto
+  class_weight_multipliers: null
+
+backtest:
+  initial_capital: 10000
+  modes: [long_only, long_short]
+
+checkpoint:
+  dir: checkpoints
