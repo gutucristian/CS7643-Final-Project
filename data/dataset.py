@@ -1,7 +1,3 @@
-"""
-PyTorch Dataset for SPY OHLCV + indicator data with sliding-window sequences.
-"""
-
 import numpy as np
 import pandas as pd
 import torch
@@ -9,21 +5,7 @@ from torch.utils.data import Dataset
 
 
 class SPYDataset(Dataset):
-    """
-    Sliding-window dataset over SPY feature data.
-
-    Each sample is a (window_size, num_features) tensor paired with a scalar
-    label {0=Hold, 1=Buy, 2=Sell} and the forward 1-day return for that day.
-
-    Args:
-        df: DataFrame of features (rows = timesteps, columns = features).
-        labels: Series of integer labels aligned with df.
-        window_size: number of look-back timesteps per sample.
-        feature_cols: list of column names to use as features. If None, all
-            numeric columns in df are used.
-        price_col: column used to compute forward returns when raw prices are available.
-        fwd_returns: optional Series of precomputed forward returns aligned with df.
-    """
+    # PyTorch dataset for sliding-window SPY features and labels
 
     def __init__(
         self,
@@ -69,7 +51,7 @@ class SPYDataset(Dataset):
         return len(self.features) - self.window_size + 1
 
     def __getitem__(self, idx):
-        window = self.features[idx : idx + self.window_size]          # (W, F)
+        window = self.features[idx : idx + self.window_size]
         label = self.labels[idx + self.window_size - 1]
         fwd_return = self.fwd_returns[idx + self.window_size - 1]
 

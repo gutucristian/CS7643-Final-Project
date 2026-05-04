@@ -1,7 +1,3 @@
-# utils/data_utils.py
-
-from __future__ import annotations
-
 import numpy as np
 import pandas as pd
 
@@ -28,12 +24,10 @@ CNN_FEATURE_COLUMNS = [
 ]
 
 
-def load_ohlcv_csv(csv_path: str) -> pd.DataFrame:
+def load_ohlcv_csv(csv_path):
     """
-    Load OHLCV data from a standard CSV with columns:
-    Date, Open, High, Low, Close, Volume
-
-    Returns a DataFrame indexed by Date.
+    Load OHLCV data from a CSV file with the following columns:
+    Date, Open, High, Low, Close, Volume and return a DataFrame indexed by Date.
     """
     df = pd.read_csv(csv_path)
 
@@ -55,14 +49,14 @@ def load_ohlcv_csv(csv_path: str) -> pd.DataFrame:
     return df
 
 
-def add_returns(df: pd.DataFrame) -> pd.DataFrame:
+def add_returns(df):
     out = df.copy()
     out["return_1d"] = out["Close"].pct_change()
     out["log_return_1d"] = np.log(out["Close"] / out["Close"].shift(1))
     return out
 
 
-def add_sma(df: pd.DataFrame, windows=(5, 10, 20, 50)) -> pd.DataFrame:
+def add_sma(df, windows=(5, 10, 20, 50)):
     out = df.copy()
     for w in windows:
         out[f"sma_{w}"] = out["Close"].rolling(w).mean()
@@ -70,14 +64,14 @@ def add_sma(df: pd.DataFrame, windows=(5, 10, 20, 50)) -> pd.DataFrame:
     return out
 
 
-def add_ema(df: pd.DataFrame, spans=(12, 26)) -> pd.DataFrame:
+def add_ema(df, spans=(12, 26)):
     out = df.copy()
     for s in spans:
         out[f"ema_{s}"] = out["Close"].ewm(span=s, adjust=False).mean()
     return out
 
 
-def add_rsi(df: pd.DataFrame, window: int = 14) -> pd.DataFrame:
+def add_rsi(df, window=14):
     out = df.copy()
     delta = out["Close"].diff()
 
@@ -92,7 +86,7 @@ def add_rsi(df: pd.DataFrame, window: int = 14) -> pd.DataFrame:
     return out
 
 
-def add_macd(df: pd.DataFrame, fast=12, slow=26, signal=9) -> pd.DataFrame:
+def add_macd(df, fast=12, slow=26, signal=9):
     out = df.copy()
 
     ema_fast = out["Close"].ewm(span=fast, adjust=False).mean()
@@ -105,7 +99,7 @@ def add_macd(df: pd.DataFrame, fast=12, slow=26, signal=9) -> pd.DataFrame:
     return out
 
 
-def add_bollinger_bands(df: pd.DataFrame, window=20, num_std=2.0) -> pd.DataFrame:
+def add_bollinger_bands(df, window=20, num_std=2.0):
     out = df.copy()
 
     mid = out["Close"].rolling(window).mean()
@@ -122,14 +116,14 @@ def add_bollinger_bands(df: pd.DataFrame, window=20, num_std=2.0) -> pd.DataFram
     return out
 
 
-def add_momentum(df: pd.DataFrame, windows=(5, 10, 20)) -> pd.DataFrame:
+def add_momentum(df, windows=(5, 10, 20)):
     out = df.copy()
     for w in windows:
         out[f"momentum_{w}"] = out["Close"] / out["Close"].shift(w) - 1.0
     return out
 
 
-def add_volatility(df: pd.DataFrame, windows=(5, 10, 20)) -> pd.DataFrame:
+def add_volatility(df, windows=(5, 10, 20)):
     out = df.copy()
     if "return_1d" not in out.columns:
         out["return_1d"] = out["Close"].pct_change()
@@ -140,7 +134,7 @@ def add_volatility(df: pd.DataFrame, windows=(5, 10, 20)) -> pd.DataFrame:
     return out
 
 
-def add_volume_features(df: pd.DataFrame, windows=(5, 20)) -> pd.DataFrame:
+def add_volume_features(df, windows=(5, 20)):
     out = df.copy()
     for w in windows:
         out[f"volume_sma_{w}"] = out["Volume"].rolling(w).mean()
@@ -148,7 +142,7 @@ def add_volume_features(df: pd.DataFrame, windows=(5, 20)) -> pd.DataFrame:
     return out
 
 
-def compute_all_indicators(df: pd.DataFrame) -> pd.DataFrame:
+def compute_all_indicators(df):
     out = df.copy()
     out = add_returns(out)
     out = add_sma(out)
@@ -162,7 +156,7 @@ def compute_all_indicators(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
-def compute_cnn_features(df: pd.DataFrame) -> pd.DataFrame:
+def compute_cnn_features(df):
     out = df.copy()
     out = add_returns(out)
     out = add_sma(out)
@@ -178,18 +172,10 @@ def compute_cnn_features(df: pd.DataFrame) -> pd.DataFrame:
     return out[CNN_FEATURE_COLUMNS].copy()
 
 
-def save_indicators_to_csv(input_csv_path: str, output_csv_path: str, dropna: bool = False) -> pd.DataFrame:
-    """
-    Load OHLCV data, compute indicators, and save to a new CSV.
+def save_indicators_to_csv(input_csv_path, output_csv_path, dropna=False):
+    # Load OHLCV data, compute indicators, save to a new CSV.
+    # Returns a DataFrame with indicators
 
-    Args:
-        input_csv_path: path to raw OHLCV CSV
-        output_csv_path: path to save enriched CSV
-        dropna: whether to drop rows with NaNs caused by rolling indicators
-
-    Returns:
-        DataFrame with indicators
-    """
     df = load_ohlcv_csv(input_csv_path)
     df = compute_all_indicators(df)
 
@@ -200,18 +186,7 @@ def save_indicators_to_csv(input_csv_path: str, output_csv_path: str, dropna: bo
     return df
 
 
-def save_cnn_features_to_csv(input_csv_path: str, output_csv_path: str, dropna: bool = True) -> pd.DataFrame:
-    """
-    Load OHLCV data, compute the recommended CNN feature set, and save it.
-
-    Args:
-        input_csv_path: path to raw OHLCV CSV
-        output_csv_path: path to save CNN feature CSV
-        dropna: whether to drop warm-up rows caused by rolling indicators
-
-    Returns:
-        DataFrame containing the CNN feature columns
-    """
+def save_cnn_features_to_csv(input_csv_path, output_csv_path, dropna=True):
     df = load_ohlcv_csv(input_csv_path)
     df = compute_cnn_features(df)
 
@@ -223,23 +198,20 @@ def save_cnn_features_to_csv(input_csv_path: str, output_csv_path: str, dropna: 
 
 
 def compute_cnn_training_data(
-    df: pd.DataFrame,
-    upper_barrier: float = 0.03,
-    lower_barrier: float = -0.03,
-    max_holding_period: int = 10,
-    price_col: str = "Close",
-    drop_feature_na: bool = True,
-    drop_last_incomplete_labels: bool = True,
-) -> pd.DataFrame:
-    """
-    Build the aligned CNN feature matrix and triple-barrier labels.
+    df,
+    upper_barrier=0.03,
+    lower_barrier=-0.03,
+    max_holding_period=10,
+    price_col="Close",
+    drop_feature_na=True,
+    drop_last_incomplete_labels=True,
+):
+    # Build the aligned CNN feature matrix and triple-barrier labels.
 
-    Returns a DataFrame indexed by Date with the feature columns
-    plus the label:
-      0 = Hold
-      1 = Buy
-      2 = Sell
-    """
+    # Returns a DataFrame indexed by Date with the feature columns plus the label:
+    # 0 = Hold
+    # 1 = Buy
+    # 2 = Sell
     features = compute_cnn_features(df)
     if drop_feature_na:
         features = features.dropna()
@@ -257,22 +229,21 @@ def compute_cnn_training_data(
     dataset = features.join(labels, how="inner")
     dataset = dataset.dropna(subset=["label"])
     dataset["label"] = dataset["label"].astype(np.int64)
+    
     return dataset
 
 
 def save_cnn_training_data_to_csv(
-    input_csv_path: str,
-    output_csv_path: str,
-    upper_barrier: float = 0.03,
-    lower_barrier: float = -0.03,
-    max_holding_period: int = 10,
-    price_col: str = "Close",
-    drop_feature_na: bool = True,
-    drop_last_incomplete_labels: bool = True,
-) -> pd.DataFrame:
-    """
-    Load OHLCV data, compute CNN features, align triple-barrier labels, and save.
-    """
+    input_csv_path,
+    output_csv_path,
+    upper_barrier=0.03,
+    lower_barrier=-0.03,
+    max_holding_period=10,
+    price_col="Close",
+    drop_feature_na=True,
+    drop_last_incomplete_labels=True,
+):
+    # Load the OHLCV data, compute CNN features, align triple-barrier labels, and save
     df = load_ohlcv_csv(input_csv_path)
     dataset = compute_cnn_training_data(
         df,

@@ -1,9 +1,5 @@
-"""
-Count label distribution in a saved labels CSV.
 
-Usage:
-    python experiments/count_labels.py SPY_ohlcv_labels_mlp.csv
-"""
+# Count label distribution in a labels CSV.
 
 import sys
 import pandas as pd

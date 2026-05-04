@@ -1,14 +1,8 @@
-from __future__ import annotations
-
 from pathlib import Path
-
 import pandas as pd
 
-
-def _prepare_price_data(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Normalize input price data to a sorted frame with a Date column.
-    """
+def _prepare_price_data(df):
+    # Normalize input price data to a sorted frame with a Date column
     data = df.copy()
 
     if "Date" not in data.columns:
@@ -43,7 +37,7 @@ def build_label_col_name(
     raise ValueError(f"Unsupported barrier_mode: {barrier_mode}")
 
 
-def _rolling_volatility(df: pd.DataFrame, price_col: str, vol_window: int) -> pd.Series:
+def _rolling_volatility(df, price_col, vol_window):
     returns = df[price_col].pct_change()
     return returns.rolling(vol_window).std()
 
@@ -57,10 +51,10 @@ def triple_barrier_labels(
     barrier_mode="fixed",
     vol_window=None,
     vol_multiplier=None,
-    drop_last_incomplete: bool = False,
+    drop_last_incomplete=False,
 ):
     """
-    Calculate labels using the triple barrier method.
+    Calculate labels using the triple barrier method
 
     Returns labels indexed by Date using the raw encoding:
       1 = upper barrier hit first
@@ -135,7 +129,7 @@ def triple_barrier_labels(
     return labels
 
 
-def encode_triple_barrier_labels(labels: pd.Series) -> pd.Series:
+def encode_triple_barrier_labels(labels):
     """
     Map raw triple-barrier labels {-1, 0, 1} to {2, 0, 1} for classifiers.
     """
@@ -158,7 +152,7 @@ class TripleBarrierLabeler:
 
         self.df = pd.read_csv(self.file_path)
 
-    def run(self, encoded: bool = True, drop_last_incomplete: bool = False) -> pd.DataFrame:
+    def run(self, encoded=True, drop_last_incomplete=False):
         data = _prepare_price_data(self.df)
         data = data.set_index("Date")
         valid_index = data.index

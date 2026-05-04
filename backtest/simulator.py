@@ -1,46 +1,22 @@
-"""
-Portfolio backtesting simulator.
 
-Supports two modes:
-  long_only  — trades between cash and long; no shorting.
-  long_short — always in the market, flips between long and short.
+# Backtesting framework
 
-Benchmark: buy-and-hold (invest all capital on day 0, sell on final day).
-"""
+# Supports two modes: long_only and long_short
 
 import numpy as np
-
-
 class Backtester:
-    """
-    Simulate a trading strategy from model predictions and compute metrics.
-
-    Args:
-        prices: array-like of daily close prices aligned with predictions.
-        initial_capital: starting portfolio value in USD.
-        mode: 'long_only' or 'long_short'.
-    """
-
-    def __init__(self, prices, initial_capital: float = 10_000.0, mode: str = "long_only"):
+    def __init__(self, prices, initial_capital=10_000.0, mode="long_only"):
         self.prices = np.asarray(prices, dtype=float)
         self.initial_capital = float(initial_capital)
-        assert mode in ("long_only", "long_short"), f"Unknown mode: {mode}"
         self.mode = mode
 
-    def run(self, signals) -> dict:
-        """
-        Execute the strategy using predicted signals.
-
-        Signal convention: 1=Long, 0=Hold, -1=Short.
-        Signal from day i is executed at day i+1 (no lookahead).
-
-        Returns:
-            Dict with keys: 'portfolio_values' (list), 'final_value' (float).
-        """
+    def run(self, signals):
+        # Execute the strategy using model generated signals
+        # Returns a dict with portfolio_values and the final value
         signals = np.asarray(signals, dtype=int)
         prices = self.prices
         n = min(len(signals), len(prices) - 1)
-        prices = prices[: n + 1]
+        prices = prices[:n + 1]
 
         if self.mode == "long_only":
             portfolio_values = self._run_long_only(signals[:n], prices)
@@ -65,13 +41,14 @@ class Backtester:
             price_today = prices[i]
             price_next = prices[i + 1]
 
-            if sig == 1 and shares == 0:        # Long signal, currently flat → buy
+            if sig == 1 and shares == 0:
+                # Long signal (buy)
                 shares = cash / price_today
                 cash = 0.0
-            elif sig == -1 and shares > 0:      # Short signal, currently long → liquidate
+            elif sig == -1 and shares > 0:
+                # Short signal (sell)
                 cash = shares * price_today
                 shares = 0.0
-            # Hold → do nothing
 
             portfolio_value = cash + shares * price_next
             values.append(portfolio_value)
@@ -80,7 +57,7 @@ class Backtester:
 
     def _run_long_short(self, signals, prices):
         equity = self.initial_capital
-        position = 0  # -1 = short, 0 = flat, +1 = long
+        position = 0
         values = []
 
         for i, sig in enumerate(signals):
@@ -99,9 +76,6 @@ class Backtester:
         return values
 
     def benchmark_values(self, prices=None):
-        """
-        Compute the buy-and-hold curve for the specified price window.
-        """
         if prices is None:
             prices = self.prices
 
@@ -110,15 +84,7 @@ class Backtester:
             return np.asarray([self.initial_capital], dtype=float)
         return self.initial_capital * (prices[1:] / prices[0])
 
-    def metrics(self, portfolio_values, benchmark_values=None) -> dict:
-        """
-        Compute financial performance metrics.
-
-        Returns:
-            Dict with keys: 'total_return', 'sharpe_ratio', 'max_drawdown',
-            'benchmark_max_drawdown', 'win_rate', 'profit_factor',
-            'benchmark_return', 'benchmark_final_value'.
-        """
+    def metrics(self, portfolio_values, benchmark_values=None):
         values = np.asarray(portfolio_values, dtype=float)
 
         total_return = (values[-1] - self.initial_capital) / self.initial_capital

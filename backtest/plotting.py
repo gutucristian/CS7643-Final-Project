@@ -1,9 +1,3 @@
-"""
-Helper functions for saving backtest curves and comparison plots.
-"""
-
-from __future__ import annotations
-
 from pathlib import Path
 
 import numpy as np
@@ -11,28 +5,14 @@ import pandas as pd
 
 
 def _load_matplotlib():
-    try:
-        import matplotlib
-
-        matplotlib.use("Agg")
-
-        import matplotlib.dates as mdates
-        import matplotlib.pyplot as plt
-        from matplotlib.ticker import FuncFormatter
-    except ImportError as exc:
-        raise ImportError(
-            "matplotlib is required for backtest plots"
-        ) from exc
-
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.dates as mdates
+    import matplotlib.pyplot as plt
+    from matplotlib.ticker import FuncFormatter
     return plt, mdates, FuncFormatter
 
-
-def save_equity_curve_csv(
-    path: str | Path,
-    dates,
-    strategy_values,
-    benchmark_values,
-) -> Path:
+def save_equity_curve_csv(path, dates,strategy_values,benchmark_values,):
     curve_df = pd.DataFrame(
         {
             "strategy_value": strategy_values,
@@ -47,23 +27,14 @@ def save_equity_curve_csv(
     return path
 
 
-def plot_equity_curves(
-    path: str | Path,
-    dates,
-    strategy_values,
-    benchmark_values,
-    *,
-    title: str,
-    strategy_label: str = "Model Strategy",
-    benchmark_label: str = "Buy & Hold SPY",
-    initial_capital: float | None = None,
-) -> Path:
+def plot_equity_curves(path,dates,strategy_values,benchmark_values,*,title,
+    strategy_label="Model Strategy",
+    benchmark_label="Buy & Hold SPY",
+    initial_capital=None,
+):
     dates = pd.to_datetime(dates).to_numpy()
     strategy_values = np.asarray(strategy_values, dtype=float)
     benchmark_values = np.asarray(benchmark_values, dtype=float)
-
-    if not (len(dates) == len(strategy_values) == len(benchmark_values)):
-        raise ValueError("dates, strategy_values, and benchmark_values must have the same length.")
 
     path = Path(path)
     plt, mdates, FuncFormatter = _load_matplotlib()
@@ -89,16 +60,8 @@ def plot_equity_curves(
         f"{strategy_label}: ${strategy_final:,.0f}\n"
         f"{benchmark_label}: ${benchmark_final:,.0f}"
     )
-    ax.text(
-        0.98,
-        0.98,
-        summary,
-        transform=ax.transAxes,
-        va="top",
-        ha="right",
-        fontsize=10,
-        bbox={"boxstyle": "round,pad=0.4", "facecolor": "white", "alpha": 0.9, "edgecolor": "#d1d5db"},
-    )
+    ax.text(0.98,0.98,summary,transform=ax.transAxes,va="top",ha="right",
+        fontsize=10, bbox={"boxstyle": "round,pad=0.4", "facecolor": "white", "alpha": 0.9, "edgecolor": "#d1d5db"})
 
     ax.set_title(title, fontsize=14, pad=12)
     ax.set_xlabel("Date")
@@ -112,7 +75,6 @@ def plot_equity_curves(
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
     ax.grid(True, linestyle="--", linewidth=0.6, alpha=0.35)
     ax.legend(frameon=False, loc="upper left")
-
     fig.autofmt_xdate()
     fig.tight_layout()
     fig.savefig(path, dpi=180, bbox_inches="tight")

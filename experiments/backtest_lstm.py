@@ -16,7 +16,7 @@ from backtest.plotting import plot_equity_curves, save_equity_curve_csv
 from data.data_utils import load_ohlcv_csv
 
 
-def load_config(path: str):
+def load_config(path):
 
     with open(path) as f:
         return yaml.safe_load(f)
@@ -215,7 +215,7 @@ def run_triple_barrier_backtest(
     return backtest_results
 
 
-def format_metrics(lines, name: str, metrics: dict):
+def format_metrics(lines, name, metrics):
 
     lines.append(f"--- {name} ---")
     lines.append(f"  Total return:           {metrics['total_return']*100:+.2f}%")
@@ -472,4 +472,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

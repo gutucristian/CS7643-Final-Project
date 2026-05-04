@@ -1,23 +1,11 @@
-"""
-Backtest script for CNN predictions.
 
-Loads saved CNN test predictions, aligns them to the raw SPY price series.
-
-Compares the strategy performance with a buy and hold SPY benchmark over the
-same test window and starting capital.
-
-Usage:
-    python experiments/backtest_cnn.py --config configs/cnn.yaml
-"""
-
-from __future__ import annotations
+# backtest script for CNN predictions. to run:
+#    python experiments/backtest_cnn.py --config configs/cnn.yaml
 
 import argparse
 import os
 import sys
-
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 import numpy as np
 import pandas as pd
 import yaml
@@ -28,29 +16,29 @@ from backtest.simulator import Backtester
 from data.data_utils import load_ohlcv_csv
 
 
-def load_config(path: str) -> dict:
+def load_config(path):
     with open(path) as f:
         return yaml.safe_load(f)
 
 
-def load_predictions(path: str) -> pd.DataFrame:
+def load_predictions(path):
     preds_df = pd.read_csv(path, index_col=0, parse_dates=True)
     preds_df.index = pd.to_datetime(preds_df.index)
     return preds_df
 
 
-def aligned_backtest_prices(df: pd.DataFrame, pred_dates: pd.DatetimeIndex, price_col: str) -> pd.Series:
+def aligned_backtest_prices(df, pred_dates, price_col):
     all_dates = df.index
     start_loc = all_dates.get_loc(pred_dates[0])
     end_loc = start_loc + len(pred_dates)
 
     if end_loc >= len(all_dates):
-        raise ValueError("Not enough price data to extend one step beyond the final prediction date.")
+        raise ValueError("Not enough price data to go beyond the final prediction date")
 
-    prices = df[price_col].iloc[start_loc : end_loc + 1].copy()
+    prices = df[price_col].iloc[start_loc:end_loc + 1].copy()
     expected_dates = pred_dates.append(pd.DatetimeIndex([all_dates[end_loc]]))
     if not prices.index.equals(expected_dates):
-        raise ValueError("Price alignment mismatch between prediction dates and raw price data.")
+        raise ValueError("Price alignment mismatch between prediction dates and raw price data")
 
     return prices
 
@@ -72,7 +60,6 @@ def main():
     predictions_path = default_predictions
     if not os.path.exists(predictions_path):
         print(f"Predictions file not found: {predictions_path}")
-        print("Run train_cnn.py first to generate predictions.")
         sys.exit(1)
 
     preds_df = load_predictions(predictions_path)

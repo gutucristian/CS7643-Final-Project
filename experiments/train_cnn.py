@@ -1,11 +1,4 @@
-"""
-End-to-end training for the 1D CNN model.
-
-Usage:
-    python experiments/train_cnn.py --config configs/cnn.yaml
-"""
-
-from __future__ import annotations
+# End-to-end training for the CNN model. To run use: python experiments/train_cnn.py --config configs/cnn.yaml
 
 import argparse
 import os
@@ -27,17 +20,17 @@ from training.losses import cross_entropy_loss, focal_loss, sharpe_loss
 from training.trainer import Trainer, resolve_device
 
 
-def load_config(path: str) -> dict:
+def load_config(path):
     with open(path) as f:
         return yaml.safe_load(f)
 
-def chronological_split(n: int, train_frac: float, val_frac: float):
+def chronological_split(n, train_frac, val_frac):
     train_end = int(n * train_frac)
     val_end = int(n * (train_frac + val_frac))
     return slice(0, train_end), slice(train_end, val_end), slice(val_end, n)
 
 
-def load_training_frame(csv_path: str, label_col: str) -> tuple[pd.DataFrame, pd.Series]:
+def load_training_frame(csv_path, label_col):
     df = pd.read_csv(csv_path, index_col=0, parse_dates=True)
     df.index = pd.to_datetime(df.index)
     labels = df[label_col].astype(int)
@@ -45,7 +38,7 @@ def load_training_frame(csv_path: str, label_col: str) -> tuple[pd.DataFrame, pd
     return features, labels
 
 
-def build_forward_returns(series: pd.Series, kind: str = "simple") -> pd.Series:
+def build_forward_returns(series, kind="simple"):
     shifted = series.shift(-1)
     if kind == "log":
         return np.expm1(shifted).fillna(0.0)
