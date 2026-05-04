@@ -2,20 +2,9 @@ import yfinance as yf
 import pandas as pd
 
 def download_etf_data(ticker: str, start: str, end: str, interval: str = "1d", output_file: str = None) -> pd.DataFrame:
-    """
-    Download OHLCV data for an ETF using the Yahoo Finance API.
-
-    Returns:
-        pandas DataFrame with Open, High, Low, Close, Volume
-    """
-    df = yf.download(
-        ticker,
-        start=start,
-        end=end,
-        interval=interval,
-        auto_adjust=False,
-        progress=True
-    )
+    # Download OHLCV data for an ETF using the Yahoo Finance API.
+    df = yf.download(ticker,start=start,end=end,
+        interval=interval,auto_adjust=False,progress=True)
 
     if df.empty:
         raise ValueError(f"No data returned for ticker {ticker}")
