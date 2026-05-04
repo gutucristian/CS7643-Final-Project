@@ -24,3 +24,6 @@ backtest:
 
 checkpoint:
   dir: checkpoints
+
+labeling:
+  method: direction_change

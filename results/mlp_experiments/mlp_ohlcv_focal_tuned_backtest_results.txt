@@ -1,0 +1,52 @@
+Run: mlp_ohlcv_focal_tuned
+Predictions: C:\Users\b0220\Documents\CS7643-Final-Project\results\mlp_ohlcv_focal_tuned_test_predictions.csv
+Samples: 736
+
+Prediction distribution:
+  Hold: 252 (34.2%)
+  Long: 328 (44.6%)
+  Short: 156 (21.2%)
+
+              precision    recall  f1-score   support
+
+        Hold      0.500     0.332     0.399       379
+        Long      0.268     0.492     0.347       179
+       Short      0.282     0.247     0.263       178
+
+    accuracy                          0.351       736
+   macro avg      0.350     0.357     0.337       736
+weighted avg      0.391     0.351     0.354       736
+
+Confusion matrix (rows=true, cols=pred):
+            Hold    Long   Short
+    Hold     126     172      81
+    Long      60      88      31
+   Short      66      68      44
+
+--- Backtest: long_only ---
+  Initial capital:       $10,000.00
+  Strategy final value:  $10,948.04
+  Benchmark final value: $13,523.47
+  Total return:          +9.48%
+  Benchmark return:      +35.23%
+  Sharpe ratio:          0.311
+  Max drawdown:          -22.61%
+  Benchmark max drawdown:-22.75%
+  Win rate:              37.1%
+  Profit factor:         1.066
+  Saved equity curve to: C:\Users\b0220\Documents\CS7643-Final-Project\results\mlp_ohlcv_focal_tuned_long_only_backtest_curve.csv
+  Saved plot to:         C:\Users\b0220\Documents\CS7643-Final-Project\results\mlp_ohlcv_focal_tuned_long_only_backtest_plot.png
+
+--- Backtest: long_short ---
+  Initial capital:       $10,000.00
+  Strategy final value:  $8,535.61
+  Benchmark final value: $13,523.47
+  Total return:          -14.64%
+  Benchmark return:      +35.23%
+  Sharpe ratio:          -0.211
+  Max drawdown:          -36.05%
+  Benchmark max drawdown:-22.75%
+  Win rate:              50.9%
+  Profit factor:         0.965
+  Saved equity curve to: C:\Users\b0220\Documents\CS7643-Final-Project\results\mlp_ohlcv_focal_tuned_long_short_backtest_curve.csv
+  Saved plot to:         C:\Users\b0220\Documents\CS7643-Final-Project\results\mlp_ohlcv_focal_tuned_long_short_backtest_plot.png

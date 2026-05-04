@@ -1,0 +1,52 @@
+Run: mlp_ohlcv_focal
+Predictions: C:\Users\b0220\Documents\CS7643-Final-Project\results\mlp_ohlcv_focal_test_predictions.csv
+Samples: 736
+
+Prediction distribution:
+  Hold: 88 (12.0%)
+  Long: 237 (32.2%)
+  Short: 411 (55.8%)
+
+              precision    recall  f1-score   support
+
+        Hold      0.511     0.119     0.193       379
+        Long      0.278     0.369     0.317       179
+       Short      0.275     0.635     0.384       178
+
+    accuracy                          0.304       736
+   macro avg      0.355     0.374     0.298       736
+weighted avg      0.398     0.304     0.269       736
+
+Confusion matrix (rows=true, cols=pred):
+            Hold    Long   Short
+    Hold      45     129     205
+    Long      20      66      93
+   Short      23      42     113
+
+--- Backtest: long_only ---
+  Initial capital:       $10,000.00
+  Strategy final value:  $10,062.95
+  Benchmark final value: $13,523.47
+  Total return:          +0.63%
+  Benchmark return:      +35.23%
+  Sharpe ratio:          0.089
+  Max drawdown:          -17.77%
+  Benchmark max drawdown:-22.75%
+  Win rate:              16.6%
+  Profit factor:         1.026
+  Saved equity curve to: C:\Users\b0220\Documents\CS7643-Final-Project\results\mlp_ohlcv_focal_long_only_backtest_curve.csv
+  Saved plot to:         C:\Users\b0220\Documents\CS7643-Final-Project\results\mlp_ohlcv_focal_long_only_backtest_plot.png
+
+--- Backtest: long_short ---
+  Initial capital:       $10,000.00
+  Strategy final value:  $7,051.00
+  Benchmark final value: $13,523.47
+  Total return:          -29.49%
+  Benchmark return:      +35.23%
+  Sharpe ratio:          -0.584
+  Max drawdown:          -45.09%
+  Benchmark max drawdown:-22.75%
+  Win rate:              46.4%
+  Profit factor:         0.905
+  Saved equity curve to: C:\Users\b0220\Documents\CS7643-Final-Project\results\mlp_ohlcv_focal_long_short_backtest_curve.csv
+  Saved plot to:         C:\Users\b0220\Documents\CS7643-Final-Project\results\mlp_ohlcv_focal_long_short_backtest_plot.png
