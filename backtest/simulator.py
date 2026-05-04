@@ -1,24 +1,10 @@
-"""
-Backtesting simulator
 
-Supports two modes:
-  long_only  — trades between cash and long; no shorting
-  long_short — always in the market, flips between long and short
-"""
+# Backtesting framework
+
+# Supports two modes: long_only and long_short
 
 import numpy as np
-
-
 class Backtester:
-    """
-    This simulates a trading strategy from model predictions 
-
-    Args:
-        prices: array of daily close prices aligned with predictions
-        initial_capital: starting portfolio value in USD
-        mode: 'long_only' or 'long_short'
-    """
-
     def __init__(self, prices, initial_capital=10_000.0, mode="long_only"):
         self.prices = np.asarray(prices, dtype=float)
         self.initial_capital = float(initial_capital)
@@ -99,14 +85,6 @@ class Backtester:
         return self.initial_capital * (prices[1:] / prices[0])
 
     def metrics(self, portfolio_values, benchmark_values=None):
-        """
-        Compute trading performance metrics.
-
-        Returns a dictionary with the following props:
-            'total_return', 'sharpe_ratio', 'max_drawdown',
-            'benchmark_max_drawdown', 'win_rate', 'profit_factor',
-            'benchmark_return', 'benchmark_final_value'.
-        """
         values = np.asarray(portfolio_values, dtype=float)
 
         total_return = (values[-1] - self.initial_capital) / self.initial_capital
