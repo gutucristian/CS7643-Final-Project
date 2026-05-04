@@ -1,24 +1,8 @@
-"""
-1D Convolutional Neural Network for Buy/Sell/Hold classification.
-"""
-
 import torch
 import torch.nn as nn
 
 
 class CNN1D(nn.Module):
-    """
-    1D CNN that treats the feature window as a sequence of channels.
-
-    Input shape: (batch, num_features, seq_len)
-    Output shape: (batch, num_classes)
-
-    Args:
-        input_channels: number of input feature channels (num_features).
-        num_classes: number of output classes (default 3).
-        dropout: dropout probability before the classifier head.
-    """
-
     def __init__(
         self,
         input_channels: int,
@@ -29,10 +13,6 @@ class CNN1D(nn.Module):
         dropout: float = 0.3,
     ):
         super().__init__()
-        if kernel_size < 1 or kernel_size % 2 == 0:
-            raise ValueError("kernel_size must be a positive odd integer.")
-        if not conv_channels:
-            raise ValueError("conv_channels must contain at least one channel size.")
 
         self.input_channels = input_channels
 
@@ -63,15 +43,11 @@ class CNN1D(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         if x.dim() != 3:
-            raise ValueError(f"Expected 3D input (batch, seq_len, features) or (batch, features, seq_len); got {x.shape}")
-
-        # Note: Dataset emits (batch, seq_len, features), but Conv1d expects channels first.
+            raise ValueError(f"input shape mismatch, got {x.shape}")
         if x.size(1) != self.input_channels and x.size(2) == self.input_channels:
             x = x.transpose(1, 2)
         elif x.size(1) != self.input_channels:
-            raise ValueError(
-                f"Expected input with {self.input_channels} feature channels; got shape {x.shape}"
-            )
+            raise ValueError(f"Expected input with {self.input_channels} feature channels, but got shape {x.shape}")
 
         x = self.features(x)
         x = self.pool(x)

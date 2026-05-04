@@ -1,13 +1,11 @@
-"""
-Generic training loop for all three model architectures.
-"""
+# training loop for all three model architectures
 
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
 
-def resolve_device(device_str: str = "auto") -> str:
+def resolve_device(device_str="auto"):
     if device_str != "auto":
         return device_str
 
@@ -22,35 +20,17 @@ def resolve_device(device_str: str = "auto") -> str:
 
 
 class Trainer:
-    """
-    Manages training and evaluation for a PyTorch model.
-
-    Args:
-        model: nn.Module to train.
-        optimizer: torch Optimizer instance.
-        criterion: loss module with signature forward(logits, labels, fwd_returns).
-        device: torch device string, e.g. 'cpu', 'cuda', 'mps', or 'auto'.
-    """
-
-    def __init__(self, model, optimizer, criterion, device: str = "cpu"):
+    def __init__(self, model, optimizer, criterion, device="cpu"):
         self.device = torch.device(resolve_device(device))
         self.model = model.to(self.device)
         self.optimizer = optimizer
         self.criterion = criterion.to(self.device) if hasattr(criterion, "to") else criterion
 
-    def train(self, dataloader: DataLoader, epochs: int = 10, val_dataloader: DataLoader = None) -> dict:
-        """
-        Run the training loop.
-
-        Returns:
-            History dict with lists: 'train_loss', 'val_loss', 'val_acc'.
-        """
+    def train(self, dataloader, epochs=10, val_dataloader=None):
         history = {"train_loss": [], "val_loss": [], "val_acc": []}
-
         for epoch in range(1, epochs + 1):
             self.model.train()
             total_loss = 0.0
-
             for windows, labels, fwd_returns in dataloader:
                 windows = windows.to(self.device)
                 labels = labels.to(self.device)
@@ -75,20 +55,13 @@ class Trainer:
                     f"Epoch {epoch:3d}/{epochs} | "
                     f"train_loss={avg_loss:.4f} | "
                     f"val_loss={val_metrics['loss']:.4f} | "
-                    f"val_acc={val_metrics['accuracy']:.4f}"
-                )
+                    f"val_acc={val_metrics['accuracy']:.4f}")
             else:
                 print(f"Epoch {epoch:3d}/{epochs} | train_loss={avg_loss:.4f}")
 
         return history
 
-    def evaluate(self, dataloader: DataLoader) -> dict:
-        """
-        Evaluate the model on a dataloader.
-
-        Returns:
-            Dict with keys: 'loss', 'accuracy'.
-        """
+    def evaluate(self, dataloader):
         self.model.eval()
         total_loss = 0.0
         correct = 0
@@ -113,13 +86,7 @@ class Trainer:
             "accuracy": correct / total,
         }
 
-    def predict(self, dataloader: DataLoader) -> np.ndarray:
-        """
-        Run inference and return class predictions as a numpy array.
-
-        Returns:
-            1-D array of argmax class indices (dtype int64).
-        """
+    def predict(self, dataloader):
         self.model.eval()
         all_preds = []
 

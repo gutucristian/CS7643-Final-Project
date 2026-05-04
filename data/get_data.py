@@ -3,14 +3,7 @@ import pandas as pd
 
 def download_etf_data(ticker: str, start: str, end: str, interval: str = "1d", output_file: str = None) -> pd.DataFrame:
     """
-    Download OHLCV data for an ETF from Yahoo Finance.
-
-    Args:
-        ticker: ETF ticker symbol, e.g. "SPY"
-        start: Start date in YYYY-MM-DD format
-        end: End date in YYYY-MM-DD format
-        interval: Price data interval
-        output_file: Optional CSV file path to save results
+    Download OHLCV data for an ETF using the Yahoo Finance API.
 
     Returns:
         pandas DataFrame with Open, High, Low, Close, Volume

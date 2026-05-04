@@ -33,8 +33,6 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
-.cursor/
-.claude/
 
 # Environment variables
 .venv

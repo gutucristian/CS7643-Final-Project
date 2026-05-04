@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import argparse
 import os
 import sys
@@ -14,35 +12,35 @@ from data.data_utils import CNN_FEATURE_COLUMNS, save_cnn_training_data_to_csv
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Build the CNN training dataset with indicator features and triple-barrier labels."
+        description="Build the CNN training dataset with indicator features and triple-barrier labels"
     )
     parser.add_argument(
         "--input",
         default="SPY_ohlcv.csv",
-        help="Path to the raw OHLCV CSV.",
+        help="Path to the raw OHLCV CSV",
     )
     parser.add_argument(
         "--output",
         default="SPY_cnn_training_data.csv",
-        help="Path to save the aligned CNN training CSV.",
+        help="Path to save the aligned CNN training CSV to",
     )
     parser.add_argument(
         "--upper-barrier",
         type=float,
         default=0.03,
-        help="Profit-taking barrier as a decimal return.",
+        help="Upper barrier for profit taking",
     )
     parser.add_argument(
         "--lower-barrier",
         type=float,
         default=-0.03,
-        help="Stop-loss barrier as a decimal return.",
+        help="Lower barrier for stop loss",
     )
     parser.add_argument(
         "--holding-period",
         type=int,
         default=10,
-        help="Maximum holding period in trading days.",
+        help="Maximum holding period",
     )
     parser.add_argument(
         "--price-col",
@@ -52,7 +50,7 @@ def parse_args():
     parser.add_argument(
         "--keep-feature-na",
         action="store_true",
-        help="Keep warm-up rows with NaNs in the feature matrix.",
+        help="Keep warm-up rows with NAN instead of dropping",
     )
     parser.add_argument(
         "--keep-truncated-labels",
