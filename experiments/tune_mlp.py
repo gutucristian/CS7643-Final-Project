@@ -1,11 +1,3 @@
-"""
-MLP hyperparameter grid search for cross_entropy and focal loss on OHLCV features.
-
-Usage:
-    python experiments/tune_mlp.py --loss cross_entropy
-    python experiments/tune_mlp.py --loss focal
-"""
-
 import argparse
 import copy
 import itertools
