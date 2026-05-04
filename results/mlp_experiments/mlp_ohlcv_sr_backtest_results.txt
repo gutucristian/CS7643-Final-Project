@@ -1,0 +1,52 @@
+Run: mlp_ohlcv_sr
+Predictions: C:\Users\b0220\Documents\CS7643-Final-Project\results\mlp_ohlcv_sr_test_predictions.csv
+Samples: 736
+
+Prediction distribution:
+  Hold: 13 (1.8%)
+  Long: 712 (96.7%)
+  Short: 11 (1.5%)
+
+              precision    recall  f1-score   support
+
+        Hold      0.538     0.018     0.036       379
+        Long      0.240     0.955     0.384       179
+       Short      0.182     0.011     0.021       178
+
+    accuracy                          0.245       736
+   macro avg      0.320     0.328     0.147       736
+weighted avg      0.380     0.245     0.117       736
+
+Confusion matrix (rows=true, cols=pred):
+            Hold    Long   Short
+    Hold       7     369       3
+    Long       2     171       6
+   Short       4     172       2
+
+--- Backtest: long_only ---
+  Initial capital:       $10,000.00
+  Strategy final value:  $13,845.07
+  Benchmark final value: $13,523.47
+  Total return:          +38.45%
+  Benchmark return:      +35.23%
+  Sharpe ratio:          0.739
+  Max drawdown:          -22.19%
+  Benchmark max drawdown:-22.75%
+  Win rate:              51.8%
+  Profit factor:         1.137
+  Saved equity curve to: C:\Users\b0220\Documents\CS7643-Final-Project\results\mlp_ohlcv_sr_long_only_backtest_curve.csv
+  Saved plot to:         C:\Users\b0220\Documents\CS7643-Final-Project\results\mlp_ohlcv_sr_long_only_backtest_plot.png
+
+--- Backtest: long_short ---
+  Initial capital:       $10,000.00
+  Strategy final value:  $14,147.88
+  Benchmark final value: $13,523.47
+  Total return:          +41.48%
+  Benchmark return:      +35.23%
+  Sharpe ratio:          0.775
+  Max drawdown:          -21.63%
+  Benchmark max drawdown:-22.75%
+  Win rate:              52.7%
+  Profit factor:         1.142
+  Saved equity curve to: C:\Users\b0220\Documents\CS7643-Final-Project\results\mlp_ohlcv_sr_long_short_backtest_curve.csv
+  Saved plot to:         C:\Users\b0220\Documents\CS7643-Final-Project\results\mlp_ohlcv_sr_long_short_backtest_plot.png

@@ -1,6 +1,6 @@
 data:
-  csv_path: SPY_ohlcv_with_indicators.csv
-  feature_cols: [all]
+  csv_path: SPY_ohlcv.csv
+  feature_cols: [Open, High, Low, Close, Volume]
   price_col: Close
   window_size: 20
   train_frac: 0.7
@@ -15,7 +15,8 @@ training:
   batch_size: 64
   epochs: 30
   learning_rate: 0.001
-  loss: cross_entropy   # one of: cross_entropy, sharpe
+  loss: focal
+  focal_gamma: 2.0
   device: auto          # auto | cpu | cuda
 
 backtest:

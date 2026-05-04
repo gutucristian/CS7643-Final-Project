@@ -1,0 +1,52 @@
+Run: mlp_all_focal
+Predictions: C:\Users\b0220\Documents\CS7643-Final-Project\results\mlp_all_focal_test_predictions.csv
+Samples: 729
+
+Prediction distribution:
+  Hold: 14 (1.9%)
+  Long: 258 (35.4%)
+  Short: 457 (62.7%)
+
+              precision    recall  f1-score   support
+
+        Hold      0.357     0.013     0.026       375
+        Long      0.279     0.407     0.331       177
+       Short      0.269     0.695     0.388       177
+
+    accuracy                          0.274       729
+   macro avg      0.302     0.372     0.248       729
+weighted avg      0.317     0.274     0.188       729
+
+Confusion matrix (rows=true, cols=pred):
+            Hold    Long   Short
+    Hold       5     138     232
+    Long       3      72     102
+   Short       6      48     123
+
+--- Backtest: long_only ---
+  Initial capital:       $10,000.00
+  Strategy final value:  $9,021.02
+  Benchmark final value: $13,061.73
+  Total return:          -9.79%
+  Benchmark return:      +30.62%
+  Sharpe ratio:          -0.306
+  Max drawdown:          -20.35%
+  Benchmark max drawdown:-22.75%
+  Win rate:              17.7%
+  Profit factor:         0.917
+  Saved equity curve to: C:\Users\b0220\Documents\CS7643-Final-Project\results\mlp_all_focal_long_only_backtest_curve.csv
+  Saved plot to:         C:\Users\b0220\Documents\CS7643-Final-Project\results\mlp_all_focal_long_only_backtest_plot.png
+
+--- Backtest: long_short ---
+  Initial capital:       $10,000.00
+  Strategy final value:  $5,870.36
+  Benchmark final value: $13,061.73
+  Total return:          -41.30%
+  Benchmark return:      +30.62%
+  Sharpe ratio:          -0.974
+  Max drawdown:          -50.40%
+  Benchmark max drawdown:-22.75%
+  Win rate:              46.6%
+  Profit factor:         0.846
+  Saved equity curve to: C:\Users\b0220\Documents\CS7643-Final-Project\results\mlp_all_focal_long_short_backtest_curve.csv
+  Saved plot to:         C:\Users\b0220\Documents\CS7643-Final-Project\results\mlp_all_focal_long_short_backtest_plot.png

@@ -15,7 +15,7 @@ training:
   batch_size: 64
   epochs: 30
   learning_rate: 0.001
-  loss: cross_entropy   # one of: cross_entropy, sharpe
+  loss: sharpe   # one of: cross_entropy, sharpe
   device: auto          # auto | cpu | cuda
 
 backtest:
@@ -24,3 +24,6 @@ backtest:
 
 checkpoint:
   dir: checkpoints
+
+labeling:
+  method: direction_change

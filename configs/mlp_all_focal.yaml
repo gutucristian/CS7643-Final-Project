@@ -15,7 +15,8 @@ training:
   batch_size: 64
   epochs: 30
   learning_rate: 0.001
-  loss: cross_entropy   # one of: cross_entropy, sharpe
+  loss: focal
+  focal_gamma: 2.0
   device: auto          # auto | cpu | cuda
 
 backtest:

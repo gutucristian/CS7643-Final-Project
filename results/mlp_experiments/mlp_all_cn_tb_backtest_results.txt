@@ -1,0 +1,52 @@
+Run: mlp_all_cn_tb
+Predictions: C:\Users\b0220\Documents\CS7643-Final-Project\results\mlp_all_cn_tb_test_predictions.csv
+Samples: 728
+
+Prediction distribution:
+  Hold: 697 (95.7%)
+  Long: 10 (1.4%)
+  Short: 21 (2.9%)
+
+              precision    recall  f1-score   support
+
+        Hold      0.410     0.990     0.580       289
+        Long      0.700     0.029     0.056       242
+       Short      0.571     0.061     0.110       197
+
+    accuracy                          0.419       728
+   macro avg      0.561     0.360     0.249       728
+weighted avg      0.550     0.419     0.279       728
+
+Confusion matrix (rows=true, cols=pred):
+            Hold    Long   Short
+    Hold     286       2       1
+    Long     227       7       8
+   Short     184       1      12
+
+--- Backtest: long_only ---
+  Initial capital:       $10,000.00
+  Strategy final value:  $10,391.68
+  Benchmark final value: $13,908.67
+  Total return:          +3.92%
+  Benchmark return:      +39.09%
+  Sharpe ratio:          0.407
+  Max drawdown:          -4.16%
+  Benchmark max drawdown:-22.75%
+  Win rate:              0.8%
+  Profit factor:         1.689
+  Saved equity curve to: C:\Users\b0220\Documents\CS7643-Final-Project\results\mlp_all_cn_tb_long_only_backtest_curve.csv
+  Saved plot to:         C:\Users\b0220\Documents\CS7643-Final-Project\results\mlp_all_cn_tb_long_only_backtest_plot.png
+
+--- Backtest: long_short ---
+  Initial capital:       $10,000.00
+  Strategy final value:  $7,131.94
+  Benchmark final value: $13,908.67
+  Total return:          -28.68%
+  Benchmark return:      +39.09%
+  Sharpe ratio:          -0.576
+  Max drawdown:          -43.35%
+  Benchmark max drawdown:-22.75%
+  Win rate:              46.8%
+  Profit factor:         0.906
+  Saved equity curve to: C:\Users\b0220\Documents\CS7643-Final-Project\results\mlp_all_cn_tb_long_short_backtest_curve.csv
+  Saved plot to:         C:\Users\b0220\Documents\CS7643-Final-Project\results\mlp_all_cn_tb_long_short_backtest_plot.png
