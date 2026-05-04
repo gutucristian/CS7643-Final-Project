@@ -1,12 +1,3 @@
-"""
-Backtest script for MLP predictions.
-
-Loads saved test predictions and runs the backtester.
-
-Usage:
-    python experiments/backtest_mlp.py --config configs/mlp.yaml
-"""
-
 import argparse
 import os
 import sys

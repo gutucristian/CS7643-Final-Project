@@ -1,10 +1,3 @@
-"""
-End-to-end MLP training and backtesting script.
-
-Usage:
-    python experiments/train_mlp.py --config configs/mlp.yaml
-"""
-
 import argparse
 import os
 import sys
