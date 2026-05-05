@@ -2,7 +2,6 @@ import argparse
 import os
 import sys
 
-# allow running from project root
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import random
@@ -76,11 +75,6 @@ def load_or_generate_labels(df, csv_path: str, price_col: str, labeling_cfg: dic
 
 
 def run_experiment(cfg: dict, run_tag: str, save_predictions: bool = True) -> dict:
-    """Train MLP with given config. Returns val metrics from best checkpoint.
-
-    Returns:
-        dict with keys: val_loss, val_acc, best_epoch
-    """
     seed = 42
     random.seed(seed)
     np.random.seed(seed)
@@ -93,15 +87,12 @@ def run_experiment(cfg: dict, run_tag: str, save_predictions: bool = True) -> di
     tc = cfg["training"]
     cc = cfg["checkpoint"]
 
-    # ------------------------------------------------------------------ data
     df = load_ohlcv_csv(dc["csv_path"])
     labeling_cfg = cfg.get("labeling", {"method": "direction_change"})
     labels = load_or_generate_labels(df, dc["csv_path"], dc["price_col"], labeling_cfg)
 
-    # align df to label index
     df = df.loc[labels.index]
 
-    # resolve feature_cols: ["all"] → every column except the price/label col
     feature_cols = dc["feature_cols"]
     if feature_cols == ["all"]:
         exclude = {"Date", dc["price_col"]}
@@ -130,7 +121,6 @@ def run_experiment(cfg: dict, run_tag: str, save_predictions: bool = True) -> di
     val_loader   = DataLoader(val_ds,   batch_size=batch_size, shuffle=False, drop_last=False)
     test_loader  = DataLoader(test_ds,  batch_size=batch_size, shuffle=False, drop_last=False)
 
-    # ----------------------------------------------------------------- model
     input_size = window_size * len(feature_cols)
     model = MLP(
         input_size=input_size,
@@ -158,14 +148,12 @@ def run_experiment(cfg: dict, run_tag: str, save_predictions: bool = True) -> di
 
     trainer = Trainer(model, optimizer, criterion, device)
 
-    # --------------------------------------------------------------- training
     os.makedirs(cc["dir"], exist_ok=True)
     checkpoint_path = os.path.join(cc["dir"], f"{run_tag}_best.pt")
 
     best_val_loss = float("inf")
     print()
     for epoch in range(1, tc["epochs"] + 1):
-        # single-epoch train
         history = trainer.train(train_loader, epochs=1)
         val_metrics = trainer.evaluate(val_loader)
 
@@ -196,7 +184,6 @@ def run_experiment(cfg: dict, run_tag: str, save_predictions: bool = True) -> di
 
     print(f"\nBest val loss: {best_val_loss:.4f}  |  checkpoint: {checkpoint_path}")
 
-    # --------------------------------------------------- reload best & test
     ckpt = torch.load(checkpoint_path, map_location=device)
     model.load_state_dict(ckpt["model_state_dict"])
     print(f"Loaded checkpoint from epoch {ckpt['epoch']}")
@@ -204,7 +191,6 @@ def run_experiment(cfg: dict, run_tag: str, save_predictions: bool = True) -> di
     test_metrics = trainer.evaluate(test_loader)
     print(f"\nTest  loss={test_metrics['loss']:.4f}  acc={test_metrics['accuracy']:.4f}")
 
-    # class breakdown
     raw_preds = trainer.predict(test_loader)
     unique, counts = np.unique(raw_preds, return_counts=True)
     label_names = {0: "Hold", 1: "Long", 2: "Short"}
@@ -216,7 +202,6 @@ def run_experiment(cfg: dict, run_tag: str, save_predictions: bool = True) -> di
         out_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "results")
         os.makedirs(out_dir, exist_ok=True)
 
-        # true labels aligned with predictions: last label of each window
         true_labels = lbl_test.values[window_size - 1:]
         pred_index  = lbl_test.index[window_size - 1:]
 
@@ -241,7 +226,6 @@ def main():
     parser.add_argument("--config", default="configs/mlp.yaml")
     args = parser.parse_args()
 
-    # derive run tag from config filename, e.g. configs/mlp_lr001.yaml → mlp_lr001
     run_tag = os.path.splitext(os.path.basename(args.config))[0]
 
     cfg = load_config(args.config)
