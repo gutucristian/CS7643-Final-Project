@@ -1,9 +1,9 @@
 
-# Backtesting framework
-
+# Backtesting framework.
 # Supports two modes: long_only and long_short
 
 import numpy as np
+
 class Backtester:
     def __init__(self, prices, initial_capital=10_000.0, mode="long_only"):
         self.prices = np.asarray(prices, dtype=float)

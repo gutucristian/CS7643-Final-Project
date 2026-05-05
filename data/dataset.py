@@ -3,18 +3,12 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset
 
-
 class SPYDataset(Dataset):
     # PyTorch dataset for sliding-window SPY features and labels
 
     def __init__(
-        self,
-        df: pd.DataFrame,
-        labels: pd.Series,
-        window_size: int = 20,
-        feature_cols: list = None,
-        price_col: str = "Close",
-        fwd_returns: pd.Series = None,
+        self,df: pd.DataFrame, labels: pd.Series, window_size: int = 20, feature_cols: list = None,
+        price_col: str = "Close", fwd_returns: pd.Series = None
     ):
         # align df, labels, and optional returns to a common index
         common_idx = df.index.intersection(labels.index)

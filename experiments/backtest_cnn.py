@@ -149,8 +149,10 @@ def main():
         print(f"  Win rate:              {metrics['win_rate']*100:.1f}%")
         print(f"  Profit factor:         {metrics['profit_factor']:.3f}")
         print(f"  Saved equity curve to: {curve_path}")
+        
         if plot_saved:
             print(f"  Saved plot to:         {plot_path}")
+        
         print()
 
 
