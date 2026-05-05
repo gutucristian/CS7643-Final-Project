@@ -1,3 +1,5 @@
+# Backtest script for MLP predictions.
+
 import argparse
 import os
 import sys
@@ -33,7 +35,6 @@ def main():
     dc = cfg["data"]
     bc = cfg["backtest"]
 
-    # --------------------------------------------------------- load predictions
     args.predictions = default_predictions
 
     if not os.path.exists(args.predictions):
@@ -48,7 +49,6 @@ def main():
     true_labels = preds_df["true_label"].values
     pred_dates = preds_df.index
 
-    # --------------------------------------------------------- load prices
     df = load_ohlcv_csv(dc["csv_path"])
     price_col = dc["price_col"]
 
@@ -58,11 +58,9 @@ def main():
     end_loc = min(start_loc + len(pred_dates) + 1, len(all_dates))
     backtest_prices = df[price_col].iloc[start_loc:end_loc].values
 
-    # --------------------------------------------------------- signal mapping
     signal_map = {0: 0, 1: 1, 2: -1}
     signals = np.array([signal_map[p] for p in raw_preds])
 
-    # --------------------------------------------------------- classification metrics
     label_names = {0: "Hold", 1: "Long", 2: "Short"}
     target_names = [label_names[i] for i in sorted(label_names)]
 
@@ -89,7 +87,6 @@ def main():
         lines.append(f"{target_names[i]:>8}" + "".join(f"{v:>8}" for v in row))
     lines.append("")
 
-    # --------------------------------------------------------- backtest
     results_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "results")
     os.makedirs(results_dir, exist_ok=True)
 

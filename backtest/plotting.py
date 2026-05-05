@@ -3,7 +3,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-
 def _load_matplotlib():
     import matplotlib
     matplotlib.use("Agg")
@@ -16,7 +15,7 @@ def save_equity_curve_csv(path, dates,strategy_values,benchmark_values,):
     curve_df = pd.DataFrame(
         {
             "strategy_value": strategy_values,
-            "benchmark_value": benchmark_values,
+            "benchmark_value": benchmark_values
         },
         index=pd.to_datetime(dates),
     )
@@ -25,7 +24,6 @@ def save_equity_curve_csv(path, dates,strategy_values,benchmark_values,):
     path = Path(path)
     curve_df.to_csv(path)
     return path
-
 
 def plot_equity_curves(path,dates,strategy_values,benchmark_values,*,title,
     strategy_label="Model Strategy",

@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
 
-from utils.triple_barrier import encode_triple_barrier_labels, triple_barrier_labels
+from utils.triple_barrier import encode_triple_barrier_labels, \
+    triple_barrier_labels
 
 
 CNN_FEATURE_COLUMNS = [
@@ -184,7 +185,6 @@ def save_indicators_to_csv(input_csv_path, output_csv_path, dropna=False):
 
     df.to_csv(output_csv_path, index=True)
     return df
-
 
 def save_cnn_features_to_csv(input_csv_path, output_csv_path, dropna=True):
     df = load_ohlcv_csv(input_csv_path)
