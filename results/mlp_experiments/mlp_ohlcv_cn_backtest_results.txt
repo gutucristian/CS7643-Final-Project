@@ -24,6 +24,9 @@ Confusion matrix (rows=true, cols=pred):
    Short      24      51     103
 
 --- Backtest: long_only ---
+  Initial capital:       $10,000.00
+  Strategy final value:  $9,912.03
+  Benchmark final value: $13,523.47
   Total return:          -0.88%
   Benchmark return:      +35.23%
   Sharpe ratio:          0.042
@@ -31,12 +34,19 @@ Confusion matrix (rows=true, cols=pred):
   Benchmark max drawdown:-22.75%
   Win rate:              20.8%
   Profit factor:         1.011
+  Saved equity curve to: C:\Users\b0220\Documents\CS7643-Final-Project\results\mlp_ohlcv_cn_long_only_backtest_curve.csv
+  Saved plot to:         C:\Users\b0220\Documents\CS7643-Final-Project\results\mlp_ohlcv_cn_long_only_backtest_plot.png
 
 --- Backtest: long_short ---
-  Total return:          -31.06%
+  Initial capital:       $10,000.00
+  Strategy final value:  $6,871.22
+  Benchmark final value: $13,523.47
+  Total return:          -31.29%
   Benchmark return:      +35.23%
-  Sharpe ratio:          -0.625
-  Max drawdown:          -43.44%
+  Sharpe ratio:          -0.635
+  Max drawdown:          -43.41%
   Benchmark max drawdown:-22.75%
   Win rate:              47.1%
-  Profit factor:         0.899
+  Profit factor:         0.897
+  Saved equity curve to: C:\Users\b0220\Documents\CS7643-Final-Project\results\mlp_ohlcv_cn_long_short_backtest_curve.csv
+  Saved plot to:         C:\Users\b0220\Documents\CS7643-Final-Project\results\mlp_ohlcv_cn_long_short_backtest_plot.png

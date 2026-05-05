@@ -1,10 +1,3 @@
-"""
-End-to-end MLP training and backtesting script.
-
-Usage:
-    python experiments/train_mlp.py --config configs/mlp.yaml
-"""
-
 import argparse
 import os
 import sys
@@ -24,7 +17,8 @@ from data.data_utils import load_ohlcv_csv
 from data.dataset import SPYDataset
 from data.labeling import direction_change_labels
 from models.mlp.model import MLP
-from training.losses import cross_entropy_loss, sharpe_loss
+from utils.triple_barrier import encode_triple_barrier_labels, triple_barrier_labels
+from training.losses import cross_entropy_loss, focal_loss, sharpe_loss
 from training.trainer import Trainer, resolve_device
 
 
@@ -38,8 +32,22 @@ def chronological_split(n: int, train_frac: float, val_frac: float):
     return slice(0, train_end), slice(train_end, val_end), slice(val_end, n)
 
 
-def load_or_generate_labels(df, csv_path: str, price_col: str) -> "pd.Series":
-    label_path = os.path.splitext(csv_path)[0] + "_labels.csv"
+def load_or_generate_labels(df, csv_path: str, price_col: str, labeling_cfg: dict) -> "pd.Series":
+    method = labeling_cfg.get("method", "direction_change")
+    base = os.path.splitext(csv_path)[0]
+
+    if method == "triple_barrier":
+        lc = labeling_cfg
+        barrier_mode = lc.get("barrier_mode", "fixed")
+        max_holding_period = lc.get("max_holding_period", 10)
+        if barrier_mode == "fixed":
+            tag = f"tb_fixed_up{int(lc.get('upper_barrier', 0.03)*100)}_down{int(abs(lc.get('lower_barrier', -0.03))*100)}_{max_holding_period}d"
+        else:
+            tag = f"tb_vol_w{lc.get('vol_window', 20)}_k{str(lc.get('vol_multiplier', 2.0)).replace('.','p')}_{max_holding_period}d"
+        label_path = f"{base}_labels_{tag}.csv"
+    else:
+        label_path = f"{base}_labels.csv"
+
     if os.path.exists(label_path):
         print(f"Loading cached labels from {label_path}")
         labels = pd.read_csv(label_path, index_col=0, parse_dates=True).squeeze()
@@ -47,19 +55,32 @@ def load_or_generate_labels(df, csv_path: str, price_col: str) -> "pd.Series":
         labels = labels.astype(int)
     else:
         print(f"Generating labels and saving to {label_path}")
-        labels = direction_change_labels(df, price_col=price_col)
+        if method == "triple_barrier":
+            lc = labeling_cfg
+            raw = triple_barrier_labels(
+                df,
+                upper_barrier=lc.get("upper_barrier", 0.03),
+                lower_barrier=lc.get("lower_barrier", -0.03),
+                max_holding_period=lc.get("max_holding_period", 10),
+                price_col=price_col,
+                barrier_mode=lc.get("barrier_mode", "fixed"),
+                vol_window=lc.get("vol_window"),
+                vol_multiplier=lc.get("vol_multiplier"),
+                drop_last_incomplete=lc.get("drop_last_incomplete", True),
+            )
+            labels = encode_triple_barrier_labels(raw)
+        else:
+            labels = direction_change_labels(df, price_col=price_col)
         labels.to_csv(label_path, header=["label"])
     return labels
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--config", default="configs/mlp.yaml")
-    args = parser.parse_args()
+def run_experiment(cfg: dict, run_tag: str, save_predictions: bool = True) -> dict:
+    """Train MLP with given config. Returns val metrics from best checkpoint.
 
-    # derive run tag from config filename, e.g. configs/mlp_lr001.yaml → mlp_lr001
-    run_tag = os.path.splitext(os.path.basename(args.config))[0]
-
+    Returns:
+        dict with keys: val_loss, val_acc, best_epoch
+    """
     seed = 42
     random.seed(seed)
     np.random.seed(seed)
@@ -67,16 +88,15 @@ def main():
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
 
-    cfg = load_config(args.config)
     dc = cfg["data"]
     mc = cfg["model"]
     tc = cfg["training"]
-    bc = cfg["backtest"]
     cc = cfg["checkpoint"]
 
     # ------------------------------------------------------------------ data
     df = load_ohlcv_csv(dc["csv_path"])
-    labels = load_or_generate_labels(df, dc["csv_path"], dc["price_col"])
+    labeling_cfg = cfg.get("labeling", {"method": "direction_change"})
+    labels = load_or_generate_labels(df, dc["csv_path"], dc["price_col"], labeling_cfg)
 
     # align df to label index
     df = df.loc[labels.index]
@@ -99,35 +119,6 @@ def main():
     lbl_test  = labels.iloc[test_sl]
 
     print(f"Data split — train: {len(df_train)}, val: {len(df_val)}, test: {len(df_test)}")
-
-    # convert OHLC to log-returns and volume to log-diff so features are stationary
-    price_cols  = [c for c in feature_cols if c != "Volume"]
-    has_volume  = "Volume" in feature_cols
-
-    def make_stationary(df_in: pd.DataFrame) -> pd.DataFrame:
-        df_out = df_in.copy()
-        for col in price_cols:
-            df_out[col] = np.log(df_in[col] / df_in[col].shift(1))
-        if has_volume:
-            df_out["Volume"] = np.log(df_in["Volume"] / df_in["Volume"].shift(1))
-        return df_out.iloc[1:]   # drop first row (NaN from shift)
-
-    # df_train = make_stationary(df_train)
-    # df_val   = make_stationary(df_val)
-    # df_test  = make_stationary(df_test)
-
-    # # re-align labels after dropping first row of each split
-    # lbl_train = lbl_train.loc[lbl_train.index.intersection(df_train.index)]
-    # lbl_val   = lbl_val.loc[lbl_val.index.intersection(df_val.index)]
-    # lbl_test  = lbl_test.loc[lbl_test.index.intersection(df_test.index)]
-
-    # # z-score normalise using train statistics only
-    # means = df_train[feature_cols].mean()
-    # stds  = df_train[feature_cols].std().replace(0, 1)
-
-    # df_train[feature_cols] = (df_train[feature_cols] - means) / stds
-    # df_val[feature_cols]   = (df_val[feature_cols]   - means) / stds
-    # df_test[feature_cols]  = (df_test[feature_cols]  - means) / stds
 
     window_size = dc["window_size"]
     train_ds = SPYDataset(df_train, lbl_train, window_size, feature_cols, dc["price_col"])
@@ -154,6 +145,11 @@ def main():
 
     if tc["loss"] == "sharpe":
         criterion = sharpe_loss()
+    elif tc["loss"] == "focal":
+        class_counts = [int((lbl_train == c).sum()) for c in range(mc["num_classes"])]
+        print(f"Train label counts — Hold: {class_counts[0]}, Long: {class_counts[1]}, Short: {class_counts[2]}")
+        alpha = [1.0 / c for c in class_counts]
+        criterion = focal_loss(num_classes=mc["num_classes"], gamma=tc.get("focal_gamma", 2.0), alpha=alpha)
     else:
         class_counts = [int((lbl_train == c).sum()) for c in range(mc["num_classes"])]
         print(f"Train label counts — Hold: {class_counts[0]}, Long: {class_counts[1]}, Short: {class_counts[2]}")
@@ -216,23 +212,40 @@ def main():
     for cls, cnt in zip(unique, counts):
         print(f"  {label_names.get(cls, cls)}: {cnt} ({cnt/len(raw_preds)*100:.1f}%)")
 
-    # ------------------------------------------------- save predictions
-    out_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "results")
-    os.makedirs(out_dir, exist_ok=True)
+    if save_predictions:
+        out_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "results")
+        os.makedirs(out_dir, exist_ok=True)
 
-    # true labels aligned with predictions: last label of each window
-    true_labels = lbl_test.values[window_size - 1:]
-    pred_index  = lbl_test.index[window_size - 1:]
+        # true labels aligned with predictions: last label of each window
+        true_labels = lbl_test.values[window_size - 1:]
+        pred_index  = lbl_test.index[window_size - 1:]
 
-    results_df = pd.DataFrame(
-        {"true_label": true_labels, "pred_label": raw_preds},
-        index=pred_index,
-    )
-    results_path = os.path.join(out_dir, f"{run_tag}_test_predictions.csv")
-    results_df.to_csv(results_path)
-    print(f"\nSaved test labels + predictions → {results_path}")
+        results_df = pd.DataFrame(
+            {"true_label": true_labels, "pred_label": raw_preds},
+            index=pred_index,
+        )
+        results_path = os.path.join(out_dir, f"{run_tag}_test_predictions.csv")
+        results_df.to_csv(results_path)
+        print(f"\nSaved test labels + predictions → {results_path}")
+        print(f"\nRun experiments/backtest_mlp.py --config <your_config> to evaluate backtest performance.")
 
-    print(f"\nRun experiments/backtest_mlp.py --config {args.config} to evaluate backtest performance.")
+    return {
+        "val_loss": ckpt["val_loss"],
+        "val_acc": ckpt["val_acc"],
+        "best_epoch": ckpt["epoch"],
+    }
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", default="configs/mlp.yaml")
+    args = parser.parse_args()
+
+    # derive run tag from config filename, e.g. configs/mlp_lr001.yaml → mlp_lr001
+    run_tag = os.path.splitext(os.path.basename(args.config))[0]
+
+    cfg = load_config(args.config)
+    run_experiment(cfg, run_tag)
 
 
 if __name__ == "__main__":

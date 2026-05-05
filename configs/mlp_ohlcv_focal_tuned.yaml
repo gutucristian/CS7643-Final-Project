@@ -1,29 +1,36 @@
 data:
-  csv_path: SPY_ohlcv_with_indicators.csv
-  feature_cols: [all]
+  csv_path: SPY_ohlcv.csv
+  feature_cols:
+  - Open
+  - High
+  - Low
+  - Close
+  - Volume
   price_col: Close
   window_size: 20
   train_frac: 0.7
   val_frac: 0.15
-
 model:
-  hidden_sizes: [256, 128, 64]
-  dropout: 0.3
   num_classes: 3
-
+  hidden_sizes:
+  - 512
+  - 256
+  - 128
+  - 64
+  dropout: 0.2
 training:
   batch_size: 64
   epochs: 30
+  device: auto
   learning_rate: 0.001
-  loss: cross_entropy   # one of: cross_entropy, sharpe
-  device: auto          # auto | cpu | cuda
-
+  loss: focal
+  focal_gamma: 5.0
 backtest:
   initial_capital: 10000
-  modes: [long_only, long_short]
-
+  modes:
+  - long_only
+  - long_short
 checkpoint:
   dir: checkpoints
-
 labeling:
   method: direction_change

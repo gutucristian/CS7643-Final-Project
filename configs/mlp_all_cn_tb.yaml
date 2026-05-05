@@ -15,8 +15,8 @@ training:
   batch_size: 64
   epochs: 30
   learning_rate: 0.001
-  loss: cross_entropy   # one of: cross_entropy, sharpe
-  device: auto          # auto | cpu | cuda
+  loss: cross_entropy
+  device: auto
 
 backtest:
   initial_capital: 10000
@@ -26,4 +26,9 @@ checkpoint:
   dir: checkpoints
 
 labeling:
-  method: direction_change
+  method: triple_barrier
+  barrier_mode: fixed
+  upper_barrier: 0.03
+  lower_barrier: -0.03
+  max_holding_period: 10
+  drop_last_incomplete: true
